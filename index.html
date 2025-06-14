@@ -33,6 +33,7 @@
         .tool.active { background-color: var(--secondary-color); color: white; border-color: #2980b9; }
         button, .tool, .map-option, .aula-item { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
         .map-selector { position: absolute; bottom: 20px; left: 20px; z-index: 1000; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15); border-radius: 15px; padding: 8px; display: flex; gap: 8px; }
+        .map-option { background: transparent; border: none; font-size: 1.5rem; cursor: pointer; padding: 5px; border-radius: 50%; width: 40px; height: 40px; transition: all 0.2s; }
         .map-option.selected { background-color: var(--theme-color); color: white; transform: scale(1.1); }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background-color: white; padding: 2rem; border-radius: 12px; width: 350px; box-shadow: 0 5px 25px rgba(0,0,0,0.3); text-align: center; }
@@ -59,7 +60,6 @@
     </style>
 </head>
 <body>
-    <!-- O restante do seu HTML da interface continua aqui -->
     <div class="header"><h1>Caderno Geográfico Interativo</h1></div>
     <div class="main-content">
         <div class="sidebar">
@@ -105,11 +105,8 @@
             aulasList: document.getElementById('aulas-list'),
         };
         let state = {
-            isDrawing: false,
-            currentTool: 'brush', brushSize: 5, color: '#e74c3c', opacity: 1.0,
-            aulas: [], activeAulaId: null, currentStroke: null,
-            isRedrawQueued: false,
-            currentInteractionMode: 'draw'
+            isDrawing: false, currentTool: 'brush', brushSize: 5, color: '#e74c3c', opacity: 1.0,
+            aulas: [], activeAulaId: null, currentStroke: null, isRedrawQueued: false, currentInteractionMode: 'draw'
         };
 
         const showNotification = (message, type = 'success', duration = 3000) => {
@@ -122,7 +119,6 @@
             setTimeout(() => { toast.classList.add('fade-out'); toast.addEventListener('animationend', () => toast.remove()); }, duration);
         };
         
-        // --- CAMADAS DE MAPA CORRIGIDAS ---
         const mapLayers = {
             political: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }),
             physical: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a>' }),
@@ -130,7 +126,6 @@
             night: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© <a href="https://carto.com/attributions">CARTO</a>', subdomains: 'abcd' })
         };
         
-        // --- INICIALIZAÇÃO DO MAPA CORRIGIDA ---
         const map = L.map(ui.mapContainer, {
             center: [20, 0], zoom: 3, minZoom: 2, worldCopyJump: true,
             maxBounds: [[-90, -180], [90, 180]], maxBoundsViscosity: 1.0,
@@ -141,13 +136,14 @@
         let currentMapLayer = 'political';
         mapLayers[currentMapLayer].addTo(map);
 
-        // Verificação de erros no carregamento dos mapas
-        Object.values(mapLayers).forEach(layer => {
-            layer.on('tileerror', (e) => {
-                console.error('Erro ao carregar tile:', e);
-                showNotification('Erro ao carregar o mapa. Verifique sua conexão.', 'error');
-            });
-        });
+        // --- CORREÇÃO ESSENCIAL ---
+        // Força a revalidação do tamanho do mapa após o layout ser calculado.
+        // Isso corrige o problema do mapa cinza ou parcialmente carregado.
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 10);
+
+        Object.values(mapLayers).forEach(layer => { layer.on('tileerror', (e) => { console.error('Erro ao carregar tile:', e); showNotification('Erro ao carregar o mapa. Verifique sua conexão.', 'error'); }); });
 
         const CanvasOverlay = L.Layer.extend({
             onAdd: function(map) { this._map = map; this._canvas = L.DomUtil.create('canvas', 'leaflet-canvas-layer'); map.getPanes().overlayPane.appendChild(this._canvas); this._update(); map.on('moveend resize', this._update, this); },
@@ -175,12 +171,9 @@
         const queueRedraw = () => { if (!state.isRedrawQueued) { state.isRedrawQueued = true; requestAnimationFrame(() => { canvasOverlay.redraw(); state.isRedrawQueued = false; }); } };
         
         const onPointerDown = (e) => {
-            const event = e.originalEvent;
-            if (event.pointerType === 'touch') return;
+            const event = e.originalEvent; if (event.pointerType === 'touch') return;
             if ((event.pointerType === 'pen' || event.pointerType === 'mouse') && state.activeAulaId) {
-                event.preventDefault(); event.stopPropagation();
-                map.dragging.disable();
-                state.isDrawing = true;
+                event.preventDefault(); event.stopPropagation(); map.dragging.disable(); state.isDrawing = true;
                 const isEraserButton = event.pointerType === 'pen' && (event.buttons === 32 || event.buttons === 5 || event.buttons === 4);
                 const toolToUse = isEraserButton ? 'eraser' : (state.currentInteractionMode === 'pin' ? 'pin' : state.currentTool);
                 if (toolToUse === 'pin') { /* openPinModalForNew(e.latlng); */ state.isDrawing = false; map.dragging.enable(); return; }
@@ -191,10 +184,7 @@
         const onPointerUp = () => {
             map.dragging.enable();
             if (state.isDrawing) {
-                if (state.currentStroke?.points.length > 1) {
-                    const aula = state.aulas.find(a => a.id === state.activeAulaId);
-                    if (aula) { if (!aula.drawings) aula.drawings = []; aula.drawings.push(state.currentStroke); }
-                }
+                if (state.currentStroke?.points.length > 1) { const aula = state.aulas.find(a => a.id === state.activeAulaId); if (aula) { if (!aula.drawings) aula.drawings = []; aula.drawings.push(state.currentStroke); }}
                 state.currentStroke = null; state.isDrawing = false;
             }
         };
@@ -227,8 +217,8 @@
         
         const loadAulasFromStorage = () => { try { const s = localStorage.getItem('geoCadernoAulas'); state.aulas = s ? JSON.parse(s) : []; } catch (e) { state.aulas = []; } };
         const saveAulasToStorage = () => localStorage.setItem('geoCadernoAulas', JSON.stringify(state.aulas));
-        const renderAulasList = () => { ui.aulasList.innerHTML = ''; state.aulas.forEach(aula => { const li = document.createElement('li'); li.className = 'aula-item'; li.dataset.id = aula.id; li.classList.toggle('active', aula.id === state.activeAulaId); li.innerHTML = `<span>${aula.name}</span>`; ui.aulasList.appendChild(li); }); };
-        const loadAula = (id) => { const a = state.aulas.find(a => a.id === id); if (!a) return; state.activeAulaId = id; updateDrawingMode(); switchMap(a.mapType || 'political'); queueRedraw(); /* loadPinsForCurrentAula(); */ document.querySelectorAll('.aula-item').forEach(i => i.classList.toggle('active', Number(i.dataset.id) === id)); };
+        const renderAulasList = () => { ui.aulasList.innerHTML = ''; (state.aulas || []).forEach(aula => { const li = document.createElement('li'); li.className = 'aula-item'; li.dataset.id = aula.id; li.classList.toggle('active', aula.id === state.activeAulaId); li.innerHTML = `<span>${aula.name}</span>`; ui.aulasList.appendChild(li); }); };
+        const loadAula = (id) => { const a = state.aulas.find(a => a.id === id); if (!a) return; state.activeAulaId = id; updateDrawingMode(); switchMap(a.mapType || 'political'); queueRedraw(); document.querySelectorAll('.aula-item').forEach(i => i.classList.toggle('active', Number(i.dataset.id) === id)); };
 
         const initializeApp = () => {
             loadAulasFromStorage();
