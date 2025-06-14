@@ -175,9 +175,54 @@
             </div>
         </div>
     </div>
-    <!-- MODAIS E OUTROS ELEMENTOS (código inalterado) -->
-    <div class="modal" id="new-aula-modal"><!-- ... --></div>
-    <div class="modal" id="pin-modal"><!-- ... --></div>
+    <!-- MODAL DE NOVA AULA -->
+    <div class="modal" id="new-aula-modal">
+        <div class="modal-content">
+            <h3 class="modal-title">Criar Nova Aula</h3>
+            <input type="text" id="aula-name-input" class="modal-input" placeholder="Dê um nome à sua aula">
+            <div class="modal-buttons">
+                <button id="cancel-new-aula" class="modal-button cancel">Cancelar</button>
+                <button id="confirm-new-aula" class="modal-button confirm">Criar</button>
+            </div>
+        </div>
+    </div>
+    <!-- NOVO MODAL PARA CRIAÇÃO/EDIÇÃO DE PINS -->
+    <div class="modal" id="pin-modal">
+      <div class="modal-content" style="max-width: 500px; text-align: left;">
+        <h3 id="pin-modal-title" class="modal-title">Adicionar Pin</h3>
+        
+        <label>Título:</label>
+        <input type="text" id="pin-title" class="modal-input" placeholder="Título que aparecerá no mapa">
+        
+        <label>Cor do Pin:</label>
+        <input type="color" id="pin-color-input" value="#e74c3c">
+
+        <label>Descrição:</label>
+        <textarea id="pin-description" class="modal-input" rows="4" placeholder="Detalhes, notas, curiosidades..."></textarea>
+
+        <label>Imagens (arraste e solte, cole ou clique):</label>
+        <div id="pin-image-dropzone" class="dropzone">
+          <div id="pin-images-preview" class="images-preview"></div>
+          <p>Clique ou cole (Ctrl+V) imagens aqui</p>
+        </div>
+        <input type="file" id="image-upload" accept="image/*" multiple style="display: none;">
+
+        <label>Links:</label>
+        <div id="pin-links-container"></div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <input type="text" id="link-url-input" class="modal-input" placeholder="Cole a URL aqui" style="margin: 0; flex-grow: 1;">
+            <button id="add-link-btn" class="modal-button confirm" style="padding: 10px;">Adicionar</button>
+        </div>
+
+        <div class="modal-buttons" style="margin-top: 20px;">
+          <button id="delete-pin-btn" class="modal-button cancel" style="display: none; margin-right: auto;">Excluir Pin</button>
+          <button id="cancel-pin" class="modal-button cancel">Cancelar</button>
+          <button id="save-pin" class="modal-button confirm">Salvar Pin</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTÊINER PARA AS NOTIFICAÇÕES -->
     <div id="notification-container"></div>
     
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -203,7 +248,13 @@
             aulas: [], activeAulaId: null, currentStroke: null, isRedrawQueued: false, isDraggingThumb: false,
             currentInteractionMode: 'draw', editingPin: null, isTwoFingerPanning: false, lastPanMidpoint: null
         };
-        const showNotification = (message, type = 'success', duration = 3000) => { /* ...código inalterado... */ const container = document.getElementById('notification-container'); const toast = document.createElement('div'); toast.className = `notification-toast ${type}`; const icons = { success: 'fa-check-circle', error: 'fa-times-circle' }; toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`; container.appendChild(toast); setTimeout(() => { toast.classList.add('fade-out'); toast.addEventListener('animationend', () => toast.remove()); }, duration); };
+        
+        const showNotification = (message, type = 'success', duration = 3000) => {
+            const container = document.getElementById('notification-container'); const toast = document.createElement('div');
+            toast.className = `notification-toast ${type}`; const icons = { success: 'fa-check-circle', error: 'fa-times-circle' };
+            toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`; container.appendChild(toast);
+            setTimeout(() => { toast.classList.add('fade-out'); toast.addEventListener('animationend', () => toast.remove()); }, duration);
+        };
         
         const map = L.map(ui.mapContainer, {
             center: [20, 0], zoom: 3, minZoom: 2, worldCopyJump: true, maxBounds: [[-90, -180], [90, 180]],
@@ -215,36 +266,40 @@
         let currentMapLayer = 'political'; mapLayers[currentMapLayer].addTo(map);
 
         const CanvasOverlay = L.Layer.extend({
-            onAdd: function(map) { /* ...código inalterado... */ this._map = map; this._canvas = L.DomUtil.create('canvas', 'leaflet-canvas-layer'); map.getPanes().overlayPane.appendChild(this._canvas); this._update(); map.on('moveend resize', this._update, this); },
-            onRemove: function(map) { /* ...código inalterado... */ map.getPanes().overlayPane.removeChild(this._canvas); map.off('moveend resize', this._update, this); },
-            _update: function() { /* ...código inalterado... */ const size = this._map.getSize(); this._canvas.width = size.x; this._canvas.height = size.y; const topLeft = this._map.containerPointToLayerPoint([0, 0]); L.DomUtil.setPosition(this._canvas, topLeft); this.redraw(); },
-            redraw: function() { /* ...código inalterado... */ const ctx = this._canvas.getContext('2d'); ctx.clearRect(0, 0, this._canvas.width, this._canvas.height); if (!state.activeAulaId) return; const aula = state.aulas.find(a => a.id === state.activeAulaId); if (!aula) return; aula.drawings.forEach(stroke => this._drawStroke(stroke, ctx)); if (state.isDrawing && state.currentStroke) this._drawStroke(state.currentStroke, ctx); },
-            _drawStroke: function(stroke, ctx) { /* ...código inalterado... */ if (!stroke || stroke.points.length < 1) return; ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = stroke.size; ctx.strokeStyle = stroke.color; ctx.globalAlpha = stroke.opacity; const points = stroke.points.map(latlng => this._map.latLngToContainerPoint(latlng)); if (points.length < 2) { ctx.beginPath(); ctx.fillStyle = ctx.strokeStyle; ctx.arc(points[0].x, points[0].y, stroke.size/2, 0, 2*Math.PI); ctx.fill(); return; } ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y); for (let i = 1; i < points.length - 2; i++) { const c = (points[i].x + points[i+1].x) / 2; const d = (points[i].y + points[i+1].y) / 2; ctx.quadraticCurveTo(points[i].x, points[i].y, c, d); } ctx.quadraticCurveTo(points[points.length-2].x, points[points.length-2].y, points[points.length-1].x, points[points.length-1].y); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
+            onAdd: function(map) { this._map = map; this._canvas = L.DomUtil.create('canvas', 'leaflet-canvas-layer'); map.getPanes().overlayPane.appendChild(this._canvas); this._update(); map.on('moveend resize', this._update, this); },
+            onRemove: function(map) { map.getPanes().overlayPane.removeChild(this._canvas); map.off('moveend resize', this._update, this); },
+            _update: function() { const size = this._map.getSize(); this._canvas.width = size.x; this._canvas.height = size.y; const topLeft = this._map.containerPointToLayerPoint([0, 0]); L.DomUtil.setPosition(this._canvas, topLeft); this.redraw(); },
+            redraw: function() {
+                const ctx = this._canvas.getContext('2d'); ctx.clearRect(0, 0, this._canvas.width, this._canvas.height); if (!state.activeAulaId) return;
+                const aula = state.aulas.find(a => a.id === state.activeAulaId); if (!aula) return; aula.drawings.forEach(stroke => this._drawStroke(stroke, ctx));
+                if (state.isDrawing && state.currentStroke) this._drawStroke(state.currentStroke, ctx);
+            },
+            _drawStroke: function(stroke, ctx) {
+                if (!stroke || stroke.points.length < 1) return;
+                ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
+                ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = stroke.size; ctx.strokeStyle = stroke.color; ctx.globalAlpha = stroke.opacity;
+                const points = stroke.points.map(latlng => this._map.latLngToContainerPoint(latlng));
+                if (points.length < 2) { ctx.beginPath(); ctx.fillStyle = ctx.strokeStyle; ctx.arc(points[0].x, points[0].y, stroke.size/2, 0, 2*Math.PI); ctx.fill(); return; }
+                ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length - 2; i++) { const c = (points[i].x + points[i+1].x) / 2; const d = (points[i].y + points[i+1].y) / 2; ctx.quadraticCurveTo(points[i].x, points[i].y, c, d); }
+                ctx.quadraticCurveTo(points[points.length-2].x, points[points.length-2].y, points[points.length-1].x, points[points.length-1].y); ctx.stroke();
+                ctx.globalCompositeOperation = 'source-over';
+            }
         });
         const canvasOverlay = new CanvasOverlay().addTo(map);
         const queueRedraw = () => { if (!state.isRedrawQueued) { state.isRedrawQueued = true; requestAnimationFrame(() => { canvasOverlay.redraw(); state.isRedrawQueued = false; }); } };
         
         const onPointerDown = (e) => {
             if (e.target && !e.target.classList.contains('leaflet-container')) return;
-
             if (isTouchDevice) {
-                // --- MUDANÇA CRÍTICA ---
-                // Se for um toque de caneta, pare o evento IMEDIATAMENTE.
-                // Isso impede que os manipuladores de arrastar do Leaflet sejam acionados.
-                // O código para desenhar continuará normalmente logo abaixo.
                 if (e.pointerType === 'pen') {
                     L.DomEvent.stop(e);
                 }
-                
-                // Se for um toque de dedo, ou se já estivermos no meio de um pan com 2 dedos,
-                // não faça nada aqui (não comece a desenhar).
                 if (e.pointerType === 'touch' || state.isTwoFingerPanning) {
                     return;
                 }
             }
-            
             if (state.currentInteractionMode === 'pin' && state.activeAulaId) { openPinModalForNew(map.mouseEventToLatLng(e)); return; }
-
             if (state.activeAulaId) {
                 state.isDrawing = true;
                 state.currentStroke = { tool: state.currentTool, color: state.currentTool === 'eraser' ? 'rgba(0,0,0,1)' : state.color, size: state.brushSize, opacity: state.currentTool === 'eraser' ? 1.0 : state.opacity, points: [map.mouseEventToLatLng(e)] };
@@ -252,7 +307,6 @@
                 state.isMapPanning = true; state.lastPanPoint = map.mouseEventToContainerPoint(e); ui.mapContainer.style.cursor = 'grabbing';
             }
         };
-
         const onPointerMove = (e) => {
             if (isTouchDevice && (e.pointerType === 'touch' || state.isTwoFingerPanning)) return;
             if (state.isDrawing) { state.currentStroke.points.push(map.mouseEventToLatLng(e)); queueRedraw(); }
@@ -264,11 +318,10 @@
             state.isDrawing = false; state.isMapPanning = false; updateDrawingMode();
         };
 
-        const handleTouchStart = (e) => { /* ...código inalterado... */ if (e.touches.length === 2) { e.preventDefault(); state.isTwoFingerPanning = true; const p1 = map.mouseEventToContainerPoint(e.touches[0]); const p2 = map.mouseEventToContainerPoint(e.touches[1]); state.lastPanMidpoint = L.point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2); } };
-        const handleTouchMove = (e) => { /* ...código inalterado... */ if (state.isTwoFingerPanning && e.touches.length === 2) { e.preventDefault(); const p1 = map.mouseEventToContainerPoint(e.touches[0]); const p2 = map.mouseEventToContainerPoint(e.touches[1]); const currentMidpoint = L.point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2); const offset = currentMidpoint.subtract(state.lastPanMidpoint); state.lastPanMidpoint = currentMidpoint; map.panBy(offset.multiplyBy(-1), { animate: false }); } };
-        const handleTouchEnd = (e) => { /* ...código inalterado... */ if (e.touches.length < 2) { state.isTwoFingerPanning = false; state.lastPanMidpoint = null; } };
+        const handleTouchStart = (e) => { if (e.touches.length === 2) { e.preventDefault(); state.isTwoFingerPanning = true; const p1 = map.mouseEventToContainerPoint(e.touches[0]); const p2 = map.mouseEventToContainerPoint(e.touches[1]); state.lastPanMidpoint = L.point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2); } };
+        const handleTouchMove = (e) => { if (state.isTwoFingerPanning && e.touches.length === 2) { e.preventDefault(); const p1 = map.mouseEventToContainerPoint(e.touches[0]); const p2 = map.mouseEventToContainerPoint(e.touches[1]); const currentMidpoint = L.point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2); const offset = currentMidpoint.subtract(state.lastPanMidpoint); state.lastPanMidpoint = currentMidpoint; map.panBy(offset.multiplyBy(-1), { animate: false }); } };
+        const handleTouchEnd = (e) => { if (e.touches.length < 2) { state.isTwoFingerPanning = false; state.lastPanMidpoint = null; } };
 
-        // RESTANTE DO CÓDIGO JS (FUNÇÕES DE PIN, AULA, ETC.) PERMANECE O MESMO
         const openPinModalForNew = (latlng) => { state.editingPin = { id: Date.now(), latlng, title: '', description: '', images: [], links: [], color: '#e74c3c' }; document.getElementById('pin-modal-title').innerText = 'Adicionar Novo Pin'; document.getElementById('delete-pin-btn').style.display = 'none'; clearPinModal(); ui.pinModal.style.display = 'flex'; };
         const openPinModalForEdit = (pin) => { state.editingPin = JSON.parse(JSON.stringify(pin)); document.getElementById('pin-modal-title').innerText = 'Editar Pin'; document.getElementById('delete-pin-btn').style.display = 'block'; clearPinModal(); document.getElementById('pin-title').value = state.editingPin.title; document.getElementById('pin-description').value = state.editingPin.description; document.getElementById('pin-color-input').value = state.editingPin.color; renderPinImagesPreview(); renderPinLinksPreview(); ui.pinModal.style.display = 'flex'; };
         const clearPinModal = () => { document.getElementById('pin-title').value = ''; document.getElementById('pin-description').value = ''; document.getElementById('pin-images-preview').innerHTML = ''; document.getElementById('pin-links-container').innerHTML = ''; document.getElementById('pin-color-input').value = '#e74c3c'; };
@@ -328,7 +381,7 @@
             document.getElementById('image-upload').addEventListener('change', (e) => handleImageFiles(e.target.files));
             window.addEventListener('paste', (e) => { if (ui.pinModal.style.display === 'flex') handleImageFiles(e.clipboardData.files); });
             const renderFavorites = () => { ui.favoritesPalette.innerHTML = ''; state.favoriteColors.forEach(c => { const s = document.createElement('div'); s.className = 'fav-swatch'; s.style.backgroundColor = c; s.addEventListener('click', () => selectColor(c)); ui.favoritesPalette.appendChild(s); }); };
-            const setupScrollbarDrag=(t,s,i)=>{t.addEventListener("pointerdown",e=>{e.stopPropagation(),state.isDraggingThumb=!0;const o=o=>{let n=0,d=0;const a=map.getPixelWorldBounds().max.x-map.getPixelWorldBounds().min.x,r=map.getPixelWorldBounds().max.y-map.getPixelWorldBounds().min.y,l=map.getSize();i?(n=o.movementX*a/l.x):(d=o.movementY*r/l.y),map.panBy([n,d],{animate:!1})},n=()=>{state.isDraggingThumb=!1,window.removeEventListener("pointermove",o),window.removeEventListener("pointerup",n)};window.addEventListener("pointermove",o),window.addEventListener("pointerup",n)})};const updateScrollbars=()=>{const t=map.getSize(),s=map.getPixelWorldBounds(),e=map.getPixelBounds(),o=s.max.x-s.min.x,n=s.max.y-s.min.y,d=e.max.x-e.min.x,a=e.max.y-e.min.y,r=d/o*t.x,l=a/n*t.y,c=(e.min.x-s.min.x)/o*t.x,h=(e.min.y-s.min.y)/n*t.y;ui.hThumb.style.width=`${Math.max(r,15)}px`,ui.vThumb.style.height=`${Math.max(l,15)}px`,ui.hThumb.style.left=`${c}px`,ui.vThumb.style.top=`${h}px`};
+            const setupScrollbarDrag=(t,s,i)=>{t.addEventListener("pointerdown",e=>{e.stopPropagation(),state.isDraggingThumb=!0;const o=o=>{let n=0,d=0;const a=map.getPixelWorldBounds().max.x-map.getPixelWorldBounds().min.x,r=map.getPixelWorldBounds().max.y-map.getPixelWorldBounds().min.y,l=map.getSize();i?(n=o.movementX*a/l.x):(d=o.movementY*r/l.y),map.panBy([n,d],{animate:!1})},n=()=>{state.isDraggingThumb=!1,window.removeEventListener("pointermove",o),window.removeEventListener("pointerup",n)};window.addEventListener("pointermove",o),window.addEventListener("pointerup",n)})};const updateScrollbars=()=>{if(isTouchDevice) return; const t=map.getSize(),s=map.getPixelWorldBounds(),e=map.getPixelBounds(),o=s.max.x-s.min.x,n=s.max.y-s.min.y,d=e.max.x-e.min.x,a=e.max.y-e.min.y,r=d/o*t.x,l=a/n*t.y,c=(e.min.x-s.min.x)/o*t.x,h=(e.min.y-s.min.y)/n*t.y;ui.hThumb.style.width=`${Math.max(r,15)}px`,ui.vThumb.style.height=`${Math.max(l,15)}px`,ui.hThumb.style.left=`${c}px`,ui.vThumb.style.top=`${h}px`};
             if (!isTouchDevice) { setupScrollbarDrag(ui.hThumb, ui.hScroll, true); setupScrollbarDrag(ui.vThumb, ui.vScroll, false); }
             map.on('move zoomend', updateScrollbars);
             renderAulasList(); renderFavorites(); selectColor(state.favoriteColors[0]); updateDrawingMode();
