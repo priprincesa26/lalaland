@@ -15,11 +15,19 @@
             --border-color: #bdc3c7; --danger-color: #e74c3c;
             --warning-color: #f1c40f; --success-color: #27ae60; --theme-color: #c71585;
         }
-        body { font-family: 'Montserrat', sans-serif; margin: 0; padding: 0; background-color: var(--background-color); color: #333; display: flex; flex-direction: column; height: 100vh; overflow: hidden; user-select: none; }
-        .header { text-align: center; padding: 15px 0; background: linear-gradient(45deg, #d63384, var(--theme-color)); color: white; box-shadow: 0 4px 15px rgba(199, 21, 133, 0.2); position: relative; z-index: 1001; }
+        /* Previne o zoom indesejado e melhora o comportamento do toque */
+        html, body { 
+            font-family: 'Montserrat', sans-serif; margin: 0; padding: 0; background-color: var(--background-color); color: #333; 
+            display: flex; flex-direction: column; 
+            height: 100vh; /* Usa 100vh para ocupar a tela toda */
+            overflow: hidden; /* Previne scroll no body */
+            user-select: none; 
+            touch-action: none; /* Desativa ações de toque padrão no body */
+        }
+        .header { text-align: center; padding: 15px 0; background: linear-gradient(45deg, #d63384, var(--theme-color)); color: white; box-shadow: 0 4px 15px rgba(199, 21, 133, 0.2); position: relative; z-index: 1001; flex-shrink: 0; }
         .header h1 { margin: 0; font-size: 2.2rem; font-family: 'Playfair Display', serif; }
         .main-content { display: flex; flex: 1; overflow: hidden; position: relative; }
-        .map-wrapper { flex: 1; position: relative; overflow: hidden; }
+        .map-wrapper { flex: 1; position: relative; overflow: hidden; touch-action: none; /* Garante que os eventos do mapa dominem */ }
         #map { height: 100%; width: 100%; background-color: #add8e6; }
         .custom-scrollbar { position: absolute; background: rgba(0, 0, 0, 0.2); border-radius: 7px; opacity: 0; transition: opacity 0.3s ease-in-out; z-index: 1000; }
         .map-wrapper:hover .custom-scrollbar { opacity: 1; }
@@ -37,6 +45,9 @@
         .tool { background-color: #f0f0f0; border: 2px solid transparent; border-radius: 8px; width: 45px; height: 45px; cursor: pointer; font-size: 1.4rem; color: var(--primary-color); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
         .tool:hover { background-color: #e0e0e0; }
         .tool.active { background-color: var(--secondary-color); color: white; border-color: #2980b9; }
+        /* Melhora a resposta ao toque dos botões */
+        button, .tool, .map-option, .aula-item { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+
         #clear-button { background-color: var(--danger-color); color: white; }
         #undo-button { background-color: var(--warning-color); color: white; }
         #save-aula-button { width: 100%; padding: 12px; font-size: 1rem; font-weight: bold; background: var(--success-color); color: white; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; }
@@ -67,7 +78,9 @@
         .modal-button.confirm { background-color: var(--success-color); color: white; }
         .modal-button.cancel { background-color: #ccc; color: #333; }
         
+        /* Cursor padrão para o mapa. Será modificado via JS */
         .leaflet-container { cursor: grab !important; touch-action: pan-y pan-x; }
+        /* Cursor para modo de desenho/caneta */
         .leaflet-container.drawing-enabled { cursor: crosshair !important; touch-action: none; }
         .leaflet-container.pin-mode { cursor: crosshair !important; touch-action: none; }
         canvas.leaflet-canvas-layer { pointer-events: none; }
@@ -93,7 +106,6 @@
         #pin-links-container .link-item { display: flex; justify-content: space-between; align-items: center; background: #f0f0f0; padding: 5px 10px; border-radius: 5px; margin-bottom: 5px; }
         #pin-links-container .remove-link-btn { background: none; border: none; color: var(--danger-color); cursor: pointer; font-size: 1.2rem; }
 
-        /* NOVO CSS PARA NOTIFICAÇÕES */
         #notification-container { position: fixed; top: 20px; right: 20px; z-index: 3000; display: flex; flex-direction: column; align-items: flex-end; }
         .notification-toast { display: flex; align-items: center; gap: 15px; color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-weight: 500; min-width: 250px; animation: slideInRight 0.4s ease-out forwards; }
         .notification-toast.fade-out { animation: fadeOut 0.5s ease-in forwards; }
@@ -103,11 +115,23 @@
         @keyframes slideInRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeOut { to { opacity: 0; transform: scale(0.9); } }
 
+        /* --- MEDIA QUERIES PARA RESPONSIVIDADE --- */
         @media (max-width: 768px) {
-            .custom-scrollbar { display: none; }
             .sidebar { position: absolute; top: 0; left: 0; height: 100%; transform: translateX(-100%); z-index: 2000; }
             .sidebar.open { transform: translateX(0); }
             .header h1 { font-size: 1.8rem; }
+        }
+
+        /* --- NOVAS REGRAS PARA TABLETS --- */
+        @media (max-width: 1024px) {
+            /* Esconde scrollbars customizadas em dispositivos de toque, que têm scroll nativo */
+            .custom-scrollbar { display: none !important; }
+            .sidebar { width: 320px; padding: 0.75rem; }
+            .tool { width: 42px; height: 42px; font-size: 1.3rem; }
+            .header h1 { font-size: 1.6rem; }
+            /* Garante que botões tenham área de toque mínima (boa prática de acessibilidade) */
+            button, .tool, .map-option { min-width: 44px; min-height: 44px; }
+            .modal-content { width: 90%; max-width: 450px; padding: 1.5rem; }
         }
     </style>
 </head>
@@ -247,7 +271,7 @@
             vThumb: document.querySelector('.custom-scrollbar.vertical .thumb'),
         };
         let state = {
-            isDrawing: false, isMapPanning: false, lastPanPoint: null,
+            isDrawing: false,
             currentTool: 'brush', brushSize: 5, color: '#e74c3c', opacity: 1.0,
             favoriteColors: ["#e74c3c", "#2ecc71", "#3498db", "#f1c40f", "#9b59b6", "#34495e", "#ffffff", "#000000"],
             aulas: [], activeAulaId: null, currentStroke: null,
@@ -255,27 +279,33 @@
             currentInteractionMode: 'draw', editingPin: null
         };
 
-        // --- NOVA FUNÇÃO PARA NOTIFICAÇÕES ---
         const showNotification = (message, type = 'success', duration = 3000) => {
             const container = document.getElementById('notification-container');
             const toast = document.createElement('div');
             toast.className = `notification-toast ${type}`;
-            
-            const icons = {
-                success: 'fa-check-circle',
-                error: 'fa-times-circle'
-            };
+            const icons = { success: 'fa-check-circle', error: 'fa-times-circle' };
             toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`;
-            
             container.appendChild(toast);
-
             setTimeout(() => {
                 toast.classList.add('fade-out');
                 toast.addEventListener('animationend', () => toast.remove());
             }, duration);
         };
-
-        let map = L.map(ui.mapContainer, { center: [20, 0], zoom: 3, minZoom: 2, worldCopyJump: true, maxBounds: [[-90, -180], [90, 180]], maxBoundsViscosity: 1.0, zoomControl: false, dragging: false, touchZoom: false, scrollWheelZoom: true });
+        
+        // --- MAP INITIALIZATION (MODIFICADO) ---
+        // Habilita o arrastar (dragging) e o zoom por toque (touchZoom)
+        let map = L.map(ui.mapContainer, { 
+            center: [20, 0], 
+            zoom: 3, 
+            minZoom: 2, 
+            worldCopyJump: true, 
+            maxBounds: [[-90, -180], [90, 180]], 
+            maxBoundsViscosity: 1.0, 
+            zoomControl: false, 
+            dragging: true, // <-- HABILITADO para arrastar com o dedo
+            touchZoom: true, // <-- HABILITADO para zoom com pinça
+            scrollWheelZoom: true 
+        });
         L.control.zoom({ position: 'topright' }).addTo(map);
         
         const mapLayers = { political: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }), physical: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap' }), satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' }), night: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO' }) };
@@ -304,32 +334,62 @@
             }
         });
         const canvasOverlay = new CanvasOverlay().addTo(map);
-        const getLatLngFromEvent = (e) => map.mouseEventToLatLng(e.touches?.[0] || e);
+        const getLatLngFromEvent = (e) => map.mouseEventToLatLng(e.originalEvent); // Usa o evento original do Leaflet
         const queueRedraw = () => { if (!state.isRedrawQueued) { state.isRedrawQueued = true; requestAnimationFrame(() => { canvasOverlay.redraw(); state.isRedrawQueued = false; }); } };
         
+        // --- NOVOS EVENT HANDLERS COM DIFERENCIAÇÃO DE TOQUE ---
         const onPointerDown = (e) => {
-            if (e.target && !e.target.classList.contains('leaflet-container')) return;
-            if (state.currentInteractionMode === 'pin' && state.activeAulaId) {
-                openPinModalForNew(getLatLngFromEvent(e));
+            const pointerType = e.originalEvent.pointerType;
+
+            // Se for dedo (touch), não faz nada aqui, deixa o Leaflet cuidar do pan/zoom
+            if (pointerType === 'touch') {
                 return;
             }
-            if (state.activeAulaId) {
-                e.preventDefault();
+
+            // Se for caneta (pen) ou mouse, inicia o desenho
+            if ((pointerType === 'pen' || pointerType === 'mouse') && state.activeAulaId) {
+                if (e.originalEvent.target && !e.originalEvent.target.classList.contains('leaflet-container')) return;
+
+                if (state.currentInteractionMode === 'pin') {
+                    openPinModalForNew(e.latlng);
+                    return;
+                }
+                
+                // Impede o mapa de arrastar enquanto desenha
+                map.dragging.disable();
+                
+                e.originalEvent.preventDefault();
                 state.isDrawing = true;
-                state.currentStroke = { tool: state.currentTool, color: state.currentTool === 'eraser' ? '#FFFFFF' : state.color, size: state.brushSize, opacity: state.opacity, points: [getLatLngFromEvent(e)] };
-            } else {
-                state.isMapPanning = true;
-                state.lastPanPoint = map.mouseEventToContainerPoint(e.touches?.[0] || e);
-                ui.mapContainer.style.cursor = 'grabbing';
+                state.currentStroke = { 
+                    tool: state.currentTool, 
+                    color: state.currentTool === 'eraser' ? '#FFFFFF' : state.color, 
+                    size: state.brushSize, 
+                    opacity: state.opacity, 
+                    points: [e.latlng] 
+                };
             }
         };
+
         const onPointerMove = (e) => {
-            if (state.isDrawing) { e.preventDefault(); state.currentStroke.points.push(getLatLngFromEvent(e)); queueRedraw(); }
-            else if (state.isMapPanning) { const p = map.mouseEventToContainerPoint(e.touches?.[0] || e); const o = p.subtract(state.lastPanPoint); state.lastPanPoint = p; map.panBy(o.multiplyBy(-1), { animate: false }); }
+            if (state.isDrawing) {
+                e.originalEvent.preventDefault();
+                state.currentStroke.points.push(e.latlng);
+                queueRedraw();
+            }
         };
+
         const onPointerUp = () => {
-            if (state.isDrawing) { if (state.currentStroke?.points.length > 1) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) a.drawings.push(state.currentStroke); } state.currentStroke = null; queueRedraw(); }
-            state.isDrawing = false; state.isMapPanning = false; updateDrawingMode();
+            if (state.isDrawing) {
+                if (state.currentStroke?.points.length > 1) {
+                    const a = state.aulas.find(a => a.id === state.activeAulaId);
+                    if (a) a.drawings.push(state.currentStroke);
+                }
+                state.currentStroke = null;
+                queueRedraw();
+            }
+            // Reabilita o arrastar do mapa para o próximo toque/clique
+            map.dragging.enable();
+            state.isDrawing = false;
         };
 
         const openPinModalForNew = (latlng) => {
@@ -391,7 +451,7 @@
         const saveAulasToStorage = () => localStorage.setItem('geoCadernoAulas', JSON.stringify(state.aulas));
         const createNewAula = (name) => { const newAula = { id: Date.now(), name: name, mapType: currentMapLayer, drawings: [], pins: [] }; state.aulas.unshift(newAula); renderAulasList(); loadAula(newAula.id); saveAulasToStorage(); ui.newAulaModal.style.display = 'none'; showNotification('Nova aula criada!'); };
         const renderAulasList = () => { ui.aulasList.innerHTML = ''; state.aulas.forEach(aula => { const li = document.createElement('li'); li.className = 'aula-item'; li.dataset.id = aula.id; li.classList.toggle('active', aula.id === state.activeAulaId); li.innerHTML = `<span>${aula.name}</span><div class="aula-actions"><button class="delete-aula-btn" data-id="${aula.id}" title="Excluir Aula"><i class="fas fa-trash"></i></button></div>`; ui.aulasList.appendChild(li); }); };
-        const updateDrawingMode = () => { const c = ui.mapContainer; const isDraw = state.currentInteractionMode === 'draw'; const isPin = state.currentInteractionMode === 'pin'; const a = !!state.activeAulaId; c.classList.toggle('drawing-enabled', a && isDraw); c.classList.toggle('pin-mode', a && isPin); c.style.cursor = a ? (isPin ? 'crosshair' : 'crosshair') : 'grab'; };
+        const updateDrawingMode = () => { const c = ui.mapContainer; const isDraw = state.currentInteractionMode === 'draw'; const isPin = state.currentInteractionMode === 'pin'; const a = !!state.activeAulaId; c.classList.toggle('drawing-enabled', a && (isDraw || isPin)); c.classList.toggle('pin-mode', a && isPin); c.style.cursor = a && (isDraw || isPin) ? 'crosshair' : 'grab'; };
         const clearAll = () => { if (!confirm("Isso limpará TODOS os desenhos e pins desta aula. Deseja continuar?")) return; if (state.activeAulaId) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) { a.drawings = []; a.pins = []; } queueRedraw(); loadPinsForCurrentAula(); }};
         const loadAula = (id) => { const a = state.aulas.find(a => a.id === id); if (!a) return; state.activeAulaId = id; updateDrawingMode(); switchMap(a.mapType); queueRedraw(); loadPinsForCurrentAula(); document.querySelectorAll('.aula-item').forEach(i => i.classList.toggle('active', Number(i.dataset.id) === id)); };
         const deleteAula = (id) => { if (!confirm("Tem certeza que deseja excluir esta aula?")) return; state.aulas = state.aulas.filter(a => a.id !== id); if (state.activeAulaId === id) { state.activeAulaId = null; updateDrawingMode(); queueRedraw(); clearAllMapPins(); } renderAulasList(); saveAulasToStorage(); };
@@ -410,14 +470,13 @@
         
         const initializeApp = () => {
             loadAulasFromStorage();
-            const mapContainer = ui.mapContainer;
-            mapContainer.addEventListener('mousedown', onPointerDown);
-            mapContainer.addEventListener('touchstart', onPointerDown, { passive: false });
-            window.addEventListener('mousemove', onPointerMove);
-            window.addEventListener('touchmove', onPointerMove, { passive: false });
-            window.addEventListener('mouseup', onPointerUp);
-            window.addEventListener('touchend', onPointerUp);
             
+            // --- EVENTOS DO MAPA (MODIFICADO) ---
+            // Usa os eventos 'pointer' do Leaflet que já diferenciam os tipos de toque
+            map.on('pointerdown', onPointerDown);
+            map.on('pointermove', onPointerMove);
+            map.on('pointerup', onPointerUp);
+
             document.getElementById('new-aula-btn').addEventListener('click', () => { const d = `Aula de ${new Date().toLocaleDateString('pt-BR')}`; document.getElementById('aula-name-input').value = d; ui.newAulaModal.style.display = 'flex'; document.getElementById('aula-name-input').select(); });
             document.getElementById('cancel-new-aula').addEventListener('click', () => ui.newAulaModal.style.display = 'none');
             document.getElementById('confirm-new-aula').addEventListener('click', () => { const n = document.getElementById('aula-name-input').value.trim(); if (n) createNewAula(n); else showNotification("Por favor, insira um nome.", "error"); });
