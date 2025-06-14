@@ -246,7 +246,8 @@
             isDrawing: false, isMapPanning: false, lastPanPoint: null, currentTool: 'brush', brushSize: 5, color: '#e74c3c', opacity: 1.0,
             favoriteColors: ["#e74c3c", "#2ecc71", "#3498db", "#f1c40f", "#9b59b6", "#34495e", "#ffffff", "#000000"],
             aulas: [], activeAulaId: null, currentStroke: null, isRedrawQueued: false, isDraggingThumb: false,
-            currentInteractionMode: 'draw', editingPin: null, isTwoFingerPanning: false, lastPanMidpoint: null
+            currentInteractionMode: 'draw', editingPin: null, isTwoFingerPanning: false, lastPanMidpoint: null,
+            isEraserOverrideActive: false // NOVO: Estado para controlar o override da borracha da caneta
         };
         
         const showNotification = (message, type = 'success', duration = 3000) => {
@@ -292,21 +293,37 @@
         const onPointerDown = (e) => {
             if (e.target && !e.target.classList.contains('leaflet-container')) return;
             if (isTouchDevice) {
-                if (e.pointerType === 'pen') {
-                    L.DomEvent.stop(e);
-                }
-                if (e.pointerType === 'touch' || state.isTwoFingerPanning) {
-                    return;
-                }
+                if (e.pointerType === 'pen') { L.DomEvent.stop(e); }
+                if (e.pointerType === 'touch' || state.isTwoFingerPanning) { return; }
             }
-            if (state.currentInteractionMode === 'pin' && state.activeAulaId) { openPinModalForNew(map.mouseEventToLatLng(e)); return; }
+
+            // MUDANÇA: Lógica para a borracha da caneta
+            let toolForThisStroke = state.currentTool;
+            // Se for caneta e o botão não for o principal (e.g. botão lateral pressionado), forçar a ferramenta para 'eraser'
+            if (e.pointerType === 'pen' && e.button !== 0) {
+                toolForThisStroke = 'eraser';
+                state.isEraserOverrideActive = true;
+            }
+
+            if (state.currentInteractionMode === 'pin' && toolForThisStroke !== 'eraser') { 
+                openPinModalForNew(map.mouseEventToLatLng(e)); 
+                return;
+            }
+
             if (state.activeAulaId) {
                 state.isDrawing = true;
-                state.currentStroke = { tool: state.currentTool, color: state.currentTool === 'eraser' ? 'rgba(0,0,0,1)' : state.color, size: state.brushSize, opacity: state.currentTool === 'eraser' ? 1.0 : state.opacity, points: [map.mouseEventToLatLng(e)] };
+                state.currentStroke = { 
+                    tool: toolForThisStroke, // Usa a ferramenta determinada (pode ser a da UI ou a borracha da caneta)
+                    color: toolForThisStroke === 'eraser' ? 'rgba(0,0,0,1)' : state.color, 
+                    size: state.brushSize, 
+                    opacity: toolForThisStroke === 'eraser' ? 1.0 : state.opacity, 
+                    points: [map.mouseEventToLatLng(e)] 
+                };
             } else if (!isTouchDevice) {
                 state.isMapPanning = true; state.lastPanPoint = map.mouseEventToContainerPoint(e); ui.mapContainer.style.cursor = 'grabbing';
             }
         };
+
         const onPointerMove = (e) => {
             if (isTouchDevice && (e.pointerType === 'touch' || state.isTwoFingerPanning)) return;
             if (state.isDrawing) { state.currentStroke.points.push(map.mouseEventToLatLng(e)); queueRedraw(); }
@@ -315,7 +332,15 @@
         const onPointerUp = (e) => {
             if (isTouchDevice && e.pointerType === 'touch') return;
             if (state.isDrawing) { if (state.currentStroke?.points.length > 1) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) a.drawings.push(state.currentStroke); } state.currentStroke = null; queueRedraw(); }
-            state.isDrawing = false; state.isMapPanning = false; updateDrawingMode();
+            
+            // MUDANÇA: Reseta o estado de override da borracha
+            if(state.isEraserOverrideActive) {
+                state.isEraserOverrideActive = false;
+            }
+
+            state.isDrawing = false; 
+            state.isMapPanning = false; 
+            updateDrawingMode();
         };
 
         const handleTouchStart = (e) => { if (e.touches.length === 2) { e.preventDefault(); state.isTwoFingerPanning = true; const p1 = map.mouseEventToContainerPoint(e.touches[0]); const p2 = map.mouseEventToContainerPoint(e.touches[1]); state.lastPanMidpoint = L.point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2); } };
