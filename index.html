@@ -27,7 +27,9 @@
         #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; background-color: #add8e6; z-index: 0; }
         .sidebar { width: 350px; background-color: var(--background-color); padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 1002; transition: transform 0.3s ease; }
         .sidebar-section { background-color: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 1rem 1.5rem; margin-bottom: 1.5rem; }
+        .sidebar-section h3 { margin-top: 0; color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
         .tool-group { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding-bottom: 0.75rem; margin-bottom: 0.75rem; border-bottom: 1px solid var(--background-color); }
+        .tool-group:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .tool { background-color: #f0f0f0; border: 2px solid transparent; border-radius: 8px; width: 45px; height: 45px; cursor: pointer; font-size: 1.4rem; color: var(--primary-color); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
         .tool:hover { background-color: #e0e0e0; }
         .tool.active { background-color: var(--secondary-color); color: white; border-color: #2980b9; }
@@ -37,12 +39,18 @@
         .map-option.selected { background-color: var(--theme-color); color: white; transform: scale(1.1); }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background-color: white; padding: 2rem; border-radius: 12px; width: 350px; box-shadow: 0 5px 25px rgba(0,0,0,0.3); text-align: center; }
+        .modal-input { width: 100%; box-sizing: border-box; padding: 10px; margin: 1rem 0; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem; }
+        .modal-button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .modal-button.confirm { background-color: var(--success-color); color: white; }
+        .modal-button.cancel { background-color: #ccc; color: #333; }
         
         .leaflet-container { touch-action: none !important; cursor: grab !important; background-color: transparent !important; }
         canvas.leaflet-canvas-layer { pointer-events: none; }
         .leaflet-container.drawing-enabled { cursor: crosshair !important; }
         .leaflet-container.pin-mode { cursor: crosshair !important; }
         .leaflet-container.eraser-active { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="black" stroke="white" stroke-width="1" d="M16.24,3.56L21.19,8.5C21.97,9.29 21.97,10.55 21.19,11.34L12,20.53C10.44,22.09 7.91,22.09 6.34,20.53L2.81,17C2.03,16.21 2.03,14.95 2.81,14.16L13.41,3.56C14.2,2.78 15.46,2.78 16.24,3.56M4.22,15.58L7.76,19.11C8.54,19.9 9.8,19.9 10.59,19.11L14.12,15.58L9.17,10.63L4.22,15.58Z"/></svg>') 12 12, auto !important; }
+        .pin-popup-content { max-width: 320px; font-family: 'Montserrat', sans-serif; max-height: 400px; overflow-y: auto; padding-right: 10px;}
         
         #notification-container { position: fixed; top: 20px; right: 20px; z-index: 3000; display: flex; flex-direction: column; align-items: flex-end; }
         .notification-toast { display: flex; align-items: center; gap: 15px; color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-weight: 500; min-width: 250px; animation: slideInRight 0.4s ease-out forwards; }
@@ -83,7 +91,7 @@
         </div>
     </div>
     <div class="modal" id="new-aula-modal"><div class="modal-content"><h3 class="modal-title">Criar Nova Aula</h3><input type="text" id="aula-name-input" class="modal-input" placeholder="Dê um nome à sua aula"><div class="modal-buttons"><button id="cancel-new-aula" class="modal-button cancel">Cancelar</button><button id="confirm-new-aula" class="modal-button confirm">Criar</button></div></div></div>
-    <div class="modal" id="pin-modal"><!-- Conteúdo do modal de Pin --></div>
+    <div class="modal" id="pin-modal"><!-- Conteúdo do modal de Pin aqui --></div>
     <div id="notification-container"></div>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -92,6 +100,9 @@
         const ui = {
             mapContainer: document.getElementById('map'),
             sidebar: document.querySelector('.sidebar'),
+            newAulaModal: document.getElementById('new-aula-modal'),
+            pinModal: document.getElementById('pin-modal'),
+            aulasList: document.getElementById('aulas-list'),
             brushToolBtn: document.getElementById('brush-tool'),
             eraserToolBtn: document.getElementById('eraser-tool'),
             pinToolBtn: document.getElementById('pin-tool'),
@@ -102,11 +113,13 @@
             sizeLabel: document.getElementById('brush-size-label'),
             opacitySlider: document.getElementById('opacity-slider'),
             opacityLabel: document.getElementById('opacity-label'),
-            aulasList: document.getElementById('aulas-list'),
+            colorPicker: document.getElementById('color-picker'),
+            favoritesPalette: document.getElementById('favorites-palette'),
         };
         let state = {
             isDrawing: false, currentTool: 'brush', brushSize: 5, color: '#e74c3c', opacity: 1.0,
-            aulas: [], activeAulaId: null, currentStroke: null, isRedrawQueued: false, currentInteractionMode: 'draw'
+            favoriteColors: ["#e74c3c", "#2ecc71", "#3498db", "#f1c40f", "#9b59b6", "#34495e", "#ffffff", "#000000"],
+            aulas: [], activeAulaId: null, currentStroke: null, isRedrawQueued: false, currentInteractionMode: 'draw', editingPin: null
         };
 
         const showNotification = (message, type = 'success', duration = 3000) => {
@@ -136,12 +149,7 @@
         let currentMapLayer = 'political';
         mapLayers[currentMapLayer].addTo(map);
 
-        // --- CORREÇÃO ESSENCIAL ---
-        // Força a revalidação do tamanho do mapa após o layout ser calculado.
-        // Isso corrige o problema do mapa cinza ou parcialmente carregado.
-        setTimeout(() => {
-            map.invalidateSize();
-        }, 10);
+        setTimeout(() => { map.invalidateSize(); }, 10);
 
         Object.values(mapLayers).forEach(layer => { layer.on('tileerror', (e) => { console.error('Erro ao carregar tile:', e); showNotification('Erro ao carregar o mapa. Verifique sua conexão.', 'error'); }); });
 
@@ -217,18 +225,30 @@
         
         const loadAulasFromStorage = () => { try { const s = localStorage.getItem('geoCadernoAulas'); state.aulas = s ? JSON.parse(s) : []; } catch (e) { state.aulas = []; } };
         const saveAulasToStorage = () => localStorage.setItem('geoCadernoAulas', JSON.stringify(state.aulas));
-        const renderAulasList = () => { ui.aulasList.innerHTML = ''; (state.aulas || []).forEach(aula => { const li = document.createElement('li'); li.className = 'aula-item'; li.dataset.id = aula.id; li.classList.toggle('active', aula.id === state.activeAulaId); li.innerHTML = `<span>${aula.name}</span>`; ui.aulasList.appendChild(li); }); };
-        const loadAula = (id) => { const a = state.aulas.find(a => a.id === id); if (!a) return; state.activeAulaId = id; updateDrawingMode(); switchMap(a.mapType || 'political'); queueRedraw(); document.querySelectorAll('.aula-item').forEach(i => i.classList.toggle('active', Number(i.dataset.id) === id)); };
-
+        const renderAulasList = () => { ui.aulasList.innerHTML = ''; (state.aulas || []).forEach(aula => { const li = document.createElement('li'); li.className = 'aula-item'; li.dataset.id = aula.id; li.classList.toggle('active', aula.id === state.activeAulaId); li.innerHTML = `<span>${aula.name}</span><div class="aula-actions"><button class="delete-aula-btn" data-id="${aula.id}" title="Excluir Aula"><i class="fas fa-trash"></i></button></div>`; ui.aulasList.appendChild(li); }); };
+        const createNewAula = (name) => { const newAula = { id: Date.now(), name: name, mapType: currentMapLayer, drawings: [], pins: [] }; state.aulas.unshift(newAula); renderAulasList(); loadAula(newAula.id); saveAulasToStorage(); showNotification('Nova aula criada!'); };
+        const loadAula = (id) => { const a = state.aulas.find(a => a.id === id); if (!a) return; state.activeAulaId = id; updateDrawingMode(); switchMap(a.mapType || 'political'); queueRedraw(); /* loadPinsForCurrentAula(); */ document.querySelectorAll('.aula-item').forEach(i => i.classList.toggle('active', Number(i.dataset.id) === id)); };
+        const deleteAula = (id) => { if (!confirm("Tem certeza que deseja excluir esta aula?")) return; state.aulas = state.aulas.filter(a => a.id !== id); if (state.activeAulaId === id) { state.activeAulaId = null; updateDrawingMode(); queueRedraw(); /* clearAllMapPins(); */ } renderAulasList(); saveAulasToStorage(); };
+        const clearAll = () => { if (!confirm("Isso limpará TODOS os desenhos e pins desta aula. Deseja continuar?")) return; if (state.activeAulaId) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) { a.drawings = []; a.pins = []; } queueRedraw(); /* loadPinsForCurrentAula(); */ }};
+        const undoLast = () => { if (!state.activeAulaId) return; const a = state.aulas.find(a => a.id === state.activeAulaId); if (a?.drawings?.length > 0) { a.drawings.pop(); queueRedraw(); } };
+        const selectColor = (color) => { state.color = color; document.getElementById('color-picker').value = color; document.querySelectorAll('.fav-swatch').forEach(s => s.style.borderColor = s.style.backgroundColor === color ? 'var(--primary-color)' : 'transparent'); updateActiveTool('brush'); };
+        
         const initializeApp = () => {
             loadAulasFromStorage();
             map.on('pointerdown', onPointerDown); map.on('pointermove', onPointerMove); map.on('pointerup', onPointerUp);
             ui.brushToolBtn.addEventListener('click', () => updateActiveTool('brush'));
             ui.eraserToolBtn.addEventListener('click', () => updateActiveTool('eraser'));
             ui.pinToolBtn.addEventListener('click', () => updateActiveTool(state.currentInteractionMode === 'pin' ? 'brush' : 'pin'));
+            ui.undoBtn.addEventListener('click', undoLast);
+            ui.clearBtn.addEventListener('click', clearAll);
             ui.saveAulaBtn.addEventListener('click', () => { saveAulasToStorage(); showNotification('Modificações salvas!'); });
+            document.getElementById('new-aula-btn').addEventListener('click', () => { document.getElementById('new-aula-modal').style.display = 'flex'; });
+            document.getElementById('cancel-new-aula').addEventListener('click', () => { document.getElementById('new-aula-modal').style.display = 'none'; });
+            document.getElementById('confirm-new-aula').addEventListener('click', () => { const name = document.getElementById('aula-name-input').value.trim(); if(name) { createNewAula(name); document.getElementById('new-aula-modal').style.display = 'none'; document.getElementById('aula-name-input').value = ''; } else { showNotification('Por favor, insira um nome.', 'error'); } });
             document.querySelectorAll('.map-option').forEach(button => button.addEventListener('click', () => switchMap(button.dataset.map)));
-            ui.aulasList.addEventListener('click', (e) => { const item = e.target.closest('.aula-item'); if(item) loadAula(Number(item.dataset.id)); });
+            ui.aulasList.addEventListener('click', (e) => { const deleteBtn = e.target.closest('.delete-aula-btn'); const item = e.target.closest('.aula-item'); if (deleteBtn) { e.stopPropagation(); deleteAula(Number(deleteBtn.dataset.id)); } else if (item) { loadAula(Number(item.dataset.id)); }});
+            ui.sizeSlider.addEventListener('input', e => { state.brushSize = e.target.value; ui.sizeLabel.textContent = e.target.value; });
+            ui.opacitySlider.addEventListener('input', e => { state.opacity = e.target.value / 100; ui.opacityLabel.textContent = `${e.target.value}%`; });
             
             updateDrawingMode();
             renderAulasList();
