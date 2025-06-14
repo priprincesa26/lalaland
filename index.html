@@ -57,9 +57,42 @@
         .aula-item.active { background-color: var(--secondary-color); color: white; font-weight: bold; }
         .aula-actions button { background: none; border: none; color: inherit; cursor: pointer; font-size: 1rem; opacity: 0.7; transition: opacity 0.2s; }
         .aula-actions button:hover { opacity: 1; }
-        .map-selector { position: absolute; bottom: 20px; left: 20px; z-index: 1000; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15); border-radius: 15px; padding: 8px; display: flex; gap: 8px; }
-        .map-option { background: transparent; border: none; font-size: 1.5rem; cursor: pointer; padding: 5px; border-radius: 50%; width: 40px; height: 40px; transition: all 0.2s; }
-        .map-option.selected { background-color: var(--theme-color); color: white; transform: scale(1.1); }
+
+        /* NOVO: Estilos para os botões de tipo de mapa na sidebar */
+        .map-type-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 0.5rem;
+        }
+        .map-type-btn {
+            background-color: #f0f0f0;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--primary-color);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .map-type-btn:hover {
+            background-color: #e0e0e0;
+            border-color: #ccc;
+        }
+        .map-type-btn.selected {
+            background-color: var(--theme-color);
+            color: white;
+            border-color: #a6116d; /* Cor do tema mais escura para a borda */
+            font-weight: bold;
+        }
+        /* Fim dos novos estilos */
+
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background-color: white; padding: 2rem; border-radius: 12px; width: 350px; box-shadow: 0 5px 25px rgba(0,0,0,0.3); text-align: center; }
         .modal-input { width: 100%; box-sizing: border-box; padding: 10px; margin: 1rem 0; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
@@ -108,11 +141,6 @@
             .sidebar { position: absolute; top: 0; left: 0; height: 100%; transform: translateX(-100%); z-index: 2000; }
             .sidebar.open { transform: translateX(0); }
             .header h1 { font-size: 1.8rem; }
-            .map-selector {
-                left: auto;
-                right: 10px;
-                bottom: 10px;
-            }
         }
     </style>
 </head>
@@ -132,6 +160,18 @@
                 <button id="new-aula-btn"><i class="fas fa-plus-circle"></i> Adicionar Nova Aula</button>
                 <ul class="aulas-list" id="aulas-list"></ul>
             </div>
+
+            <!-- NOVO: Seção de Tipos de Mapa -->
+            <div class="sidebar-section">
+                <h3><i class="fas fa-layer-group"></i> Tipos de Mapa</h3>
+                <div class="map-type-container">
+                    <button class="map-type-btn" data-map="political"><i class="fas fa-map"></i> Político</button>
+                    <button class="map-type-btn" data-map="physical"><i class="fas fa-mountain"></i> Físico</button>
+                    <button class="map-type-btn" data-map="satellite"><i class="fas fa-satellite"></i> Satélite</button>
+                    <button class="map-type-btn" data-map="night"><i class="fas fa-moon"></i> Noturno</button>
+                </div>
+            </div>
+
             <div class="sidebar-section">
                 <h3><i class="fas fa-paint-brush"></i> Ferramentas</h3>
                 <div class="tool-group">
@@ -167,12 +207,7 @@
             <div id="map"></div>
             <div class="custom-scrollbar horizontal"><div class="thumb"></div></div>
             <div class="custom-scrollbar vertical"><div class="thumb"></div></div>
-            <div class="map-selector">
-                <button class="map-option selected" data-map="political" title="Político">🗺️</button>
-                <button class="map-option" data-map="physical" title="Físico">🏔️</button>
-                <button class="map-option" data-map="satellite" title="Satélite">🛰️</button>
-                <button class="map-option" data-map="night" title="Noturno">🌙</button>
-            </div>
+            <!-- SELETOR DE MAPA FOI REMOVIDO DAQUI -->
         </div>
     </div>
     <!-- MODAL DE NOVA AULA -->
@@ -246,8 +281,7 @@
             isDrawing: false, isMapPanning: false, lastPanPoint: null, currentTool: 'brush', brushSize: 5, color: '#e74c3c', opacity: 1.0,
             favoriteColors: ["#e74c3c", "#2ecc71", "#3498db", "#f1c40f", "#9b59b6", "#34495e", "#ffffff", "#000000"],
             aulas: [], activeAulaId: null, currentStroke: null, isRedrawQueued: false, isDraggingThumb: false,
-            currentInteractionMode: 'draw', editingPin: null, isTwoFingerPanning: false, lastPanMidpoint: null,
-            isEraserOverrideActive: false // NOVO: Estado para controlar o override da borracha da caneta
+            currentInteractionMode: 'draw', editingPin: null, isTwoFingerPanning: false, lastPanMidpoint: null
         };
         
         const showNotification = (message, type = 'success', duration = 3000) => {
@@ -296,34 +330,14 @@
                 if (e.pointerType === 'pen') { L.DomEvent.stop(e); }
                 if (e.pointerType === 'touch' || state.isTwoFingerPanning) { return; }
             }
-
-            // MUDANÇA: Lógica para a borracha da caneta
-            let toolForThisStroke = state.currentTool;
-            // Se for caneta e o botão não for o principal (e.g. botão lateral pressionado), forçar a ferramenta para 'eraser'
-            if (e.pointerType === 'pen' && e.button !== 0) {
-                toolForThisStroke = 'eraser';
-                state.isEraserOverrideActive = true;
-            }
-
-            if (state.currentInteractionMode === 'pin' && toolForThisStroke !== 'eraser') { 
-                openPinModalForNew(map.mouseEventToLatLng(e)); 
-                return;
-            }
-
+            if (state.currentInteractionMode === 'pin') { openPinModalForNew(map.mouseEventToLatLng(e)); return; }
             if (state.activeAulaId) {
                 state.isDrawing = true;
-                state.currentStroke = { 
-                    tool: toolForThisStroke, // Usa a ferramenta determinada (pode ser a da UI ou a borracha da caneta)
-                    color: toolForThisStroke === 'eraser' ? 'rgba(0,0,0,1)' : state.color, 
-                    size: state.brushSize, 
-                    opacity: toolForThisStroke === 'eraser' ? 1.0 : state.opacity, 
-                    points: [map.mouseEventToLatLng(e)] 
-                };
+                state.currentStroke = { tool: state.currentTool, color: state.currentTool === 'eraser' ? 'rgba(0,0,0,1)' : state.color, size: state.brushSize, opacity: state.currentTool === 'eraser' ? 1.0 : state.opacity, points: [map.mouseEventToLatLng(e)] };
             } else if (!isTouchDevice) {
                 state.isMapPanning = true; state.lastPanPoint = map.mouseEventToContainerPoint(e); ui.mapContainer.style.cursor = 'grabbing';
             }
         };
-
         const onPointerMove = (e) => {
             if (isTouchDevice && (e.pointerType === 'touch' || state.isTwoFingerPanning)) return;
             if (state.isDrawing) { state.currentStroke.points.push(map.mouseEventToLatLng(e)); queueRedraw(); }
@@ -332,15 +346,7 @@
         const onPointerUp = (e) => {
             if (isTouchDevice && e.pointerType === 'touch') return;
             if (state.isDrawing) { if (state.currentStroke?.points.length > 1) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) a.drawings.push(state.currentStroke); } state.currentStroke = null; queueRedraw(); }
-            
-            // MUDANÇA: Reseta o estado de override da borracha
-            if(state.isEraserOverrideActive) {
-                state.isEraserOverrideActive = false;
-            }
-
-            state.isDrawing = false; 
-            state.isMapPanning = false; 
-            updateDrawingMode();
+            state.isDrawing = false; state.isMapPanning = false; updateDrawingMode();
         };
 
         const handleTouchStart = (e) => { if (e.touches.length === 2) { e.preventDefault(); state.isTwoFingerPanning = true; const p1 = map.mouseEventToContainerPoint(e.touches[0]); const p2 = map.mouseEventToContainerPoint(e.touches[1]); state.lastPanMidpoint = L.point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2); } };
@@ -369,7 +375,7 @@
         const loadAula = (id) => { const a = state.aulas.find(a => a.id === id); if (!a) return; state.activeAulaId = id; updateDrawingMode(); switchMap(a.mapType); queueRedraw(); loadPinsForCurrentAula(); document.querySelectorAll('.aula-item').forEach(i => i.classList.toggle('active', Number(i.dataset.id) === id)); };
         const deleteAula = (id) => { if (!confirm("Tem certeza que deseja excluir esta aula?")) return; state.aulas = state.aulas.filter(a => a.id !== id); if (state.activeAulaId === id) { state.activeAulaId = null; updateDrawingMode(); queueRedraw(); clearAllMapPins(); } renderAulasList(); saveAulasToStorage(); };
         const undoLast = () => { if (!state.activeAulaId) return; const a = state.aulas.find(a => a.id === state.activeAulaId); if (a?.drawings?.length > 0) { a.drawings.pop(); queueRedraw(); } };
-        const switchMap = (mapType) => { if (mapLayers[mapType] && mapType !== currentMapLayer) { map.removeLayer(mapLayers[currentMapLayer]); currentMapLayer = mapType; map.addLayer(mapLayers[currentMapLayer]); if(state.activeAulaId) { const a = state.aulas.find(a => a.id === state.activeAulaId); if(a) a.mapType = mapType; } } document.querySelectorAll('.map-option').forEach(b => b.classList.toggle('selected', b.dataset.map === mapType)); };
+        const switchMap = (mapType) => { if (mapLayers[mapType] && mapType !== currentMapLayer) { map.removeLayer(mapLayers[currentMapLayer]); currentMapLayer = mapType; map.addLayer(mapLayers[currentMapLayer]); if(state.activeAulaId) { const a = state.aulas.find(a => a.id === state.activeAulaId); if(a) a.mapType = mapType; } } document.querySelectorAll('.map-type-btn').forEach(b => b.classList.toggle('selected', b.dataset.map === mapType)); };
         const selectColor = (color) => { state.color = color; ui.colorPicker.value = color; document.querySelectorAll('.fav-swatch').forEach(s => s.style.borderColor = s.style.backgroundColor === color ? 'var(--primary-color)' : 'transparent'); updateActiveTool('brush'); };
         const updateActiveTool = (tool) => { const isPin = tool === 'pin'; const isEraser = tool === 'eraser'; state.currentInteractionMode = isPin ? 'pin' : 'draw'; if (!isPin) state.currentTool = tool; ui.opacityContainer.classList.toggle('disabled', isEraser); ui.brushToolBtn.classList.toggle('active', tool === 'brush'); ui.eraserToolBtn.classList.toggle('active', isEraser); ui.pinToolBtn.classList.toggle('active', isPin); updateDrawingMode(); };
         
@@ -397,7 +403,7 @@
             ui.sizeSlider.addEventListener('input', e => { state.brushSize = e.target.value; ui.sizeLabel.textContent = e.target.value; });
             ui.opacitySlider.addEventListener('input', e => { state.opacity = e.target.value / 100; ui.opacityLabel.textContent = `${e.target.value}%`; });
             ui.colorPicker.addEventListener('input', e => selectColor(e.target.value));
-            document.querySelectorAll('.map-option').forEach(b => b.addEventListener('click', () => switchMap(b.dataset.map)));
+            document.querySelectorAll('.map-type-btn').forEach(b => b.addEventListener('click', () => switchMap(b.dataset.map))); // ATUALIZADO
             ui.aulasList.addEventListener('click', (e) => { const b = e.target.closest('.delete-aula-btn'); const i = e.target.closest('.aula-item'); if (b) { e.stopPropagation(); deleteAula(Number(b.dataset.id)); } else if (i) { loadAula(Number(i.dataset.id)); } });
             ui.pinModal.addEventListener('click', (e) => { if (e.target.classList.contains('remove-img-btn')) { state.editingPin.images.splice(e.target.dataset.index, 1); renderPinImagesPreview(); } if (e.target.classList.contains('remove-link-btn')) { state.editingPin.links.splice(e.target.dataset.index, 1); renderPinLinksPreview(); } });
             document.getElementById('save-pin').addEventListener('click', savePin); document.getElementById('delete-pin-btn').addEventListener('click', deleteCurrentPin); document.getElementById('cancel-pin').addEventListener('click', () => { ui.pinModal.style.display = 'none'; });
@@ -409,7 +415,7 @@
             const setupScrollbarDrag=(t,s,i)=>{t.addEventListener("pointerdown",e=>{e.stopPropagation(),state.isDraggingThumb=!0;const o=o=>{let n=0,d=0;const a=map.getPixelWorldBounds().max.x-map.getPixelWorldBounds().min.x,r=map.getPixelWorldBounds().max.y-map.getPixelWorldBounds().min.y,l=map.getSize();i?(n=o.movementX*a/l.x):(d=o.movementY*r/l.y),map.panBy([n,d],{animate:!1})},n=()=>{state.isDraggingThumb=!1,window.removeEventListener("pointermove",o),window.removeEventListener("pointerup",n)};window.addEventListener("pointermove",o),window.addEventListener("pointerup",n)})};const updateScrollbars=()=>{if(isTouchDevice) return; const t=map.getSize(),s=map.getPixelWorldBounds(),e=map.getPixelBounds(),o=s.max.x-s.min.x,n=s.max.y-s.min.y,d=e.max.x-e.min.x,a=e.max.y-e.min.y,r=d/o*t.x,l=a/n*t.y,c=(e.min.x-s.min.x)/o*t.x,h=(e.min.y-s.min.y)/n*t.y;ui.hThumb.style.width=`${Math.max(r,15)}px`,ui.vThumb.style.height=`${Math.max(l,15)}px`,ui.hThumb.style.left=`${c}px`,ui.vThumb.style.top=`${h}px`};
             if (!isTouchDevice) { setupScrollbarDrag(ui.hThumb, ui.hScroll, true); setupScrollbarDrag(ui.vThumb, ui.vScroll, false); }
             map.on('move zoomend', updateScrollbars);
-            renderAulasList(); renderFavorites(); selectColor(state.favoriteColors[0]); updateDrawingMode();
+            renderAulasList(); renderFavorites(); selectColor(state.favoriteColors[0]);
             if (state.aulas.length > 0) { loadAula(state.aulas[0].id); } else { switchMap('political'); }
             setTimeout(updateScrollbars, 500);
         };
