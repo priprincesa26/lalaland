@@ -52,8 +52,9 @@
         
         .map-wrapper { flex: 1; position: relative; overflow: hidden; }
         #map { height: 100%; width: 100%; background-color: #add8e6; }
-        .sidebar { width: 350px; background-color: var(--background-color); padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 1002; transition: transform 0.3s ease; }
-        .sidebar-aula-title { background-color: var(--primary-color); color: white; padding: 15px; margin: -1rem -1rem 1rem -1rem; font-size: 1.1rem; text-align: center; }
+        
+        .sidebar { width: 350px; background-color: var(--background-color); padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 1002; }
+        .sidebar-aula-title { background-color: var(--primary-color); color: white; padding: 15px; margin: -1rem -1rem 1rem -1rem; font-size: 1.1rem; text-align: center; font-weight: 500; }
         .sidebar-section { background-color: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 1rem 1.5rem; margin-bottom: 1.5rem; }
         .sidebar-section h3 { margin-top: 0; color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
         .tool-group { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding-bottom: 0.75rem; margin-bottom: 0.75rem; border-bottom: 1px solid var(--background-color); }
@@ -94,27 +95,8 @@
         .leaflet-container.pin-mode { cursor: crosshair !important; touch-action: none; }
         canvas.leaflet-canvas-layer { pointer-events: none; }
         
-        .custom-pin-icon { position: relative; text-align: center; }
-        .custom-pin-icon .pin-background { font-size: 2.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.4); line-height: 1; }
-        .custom-pin-icon .pin-text { position: absolute; top: 8px; left: 0; right: 0; font-size: 1rem; font-weight: bold; color: white; text-shadow: 1px 1px 2px black; pointer-events: none;}
         .pin-popup-content { max-width: 320px; font-family: 'Montserrat', sans-serif; max-height: 400px; overflow-y: auto; padding-right: 10px;}
-        .pin-popup-content h4 { margin-top: 0; color: var(--primary-color); }
-        .pin-popup-content p { margin: 10px 0; white-space: pre-wrap; }
-        .pin-popup-content .images-container img { max-width: 100%; border-radius: 5px; margin-top: 5px; }
-        .pin-popup-content .links-container a { display: block; margin: 5px 0; color: var(--secondary-color); word-break: break-all; }
-        .pin-popup-content .youtube-embed { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; background: #000; margin: 10px 0; }
-        .pin-popup-content .youtube-embed iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        #pin-modal .modal-input, #pin-modal textarea { width: 100%; box-sizing: border-box; }
-        #pin-modal label { display: block; margin-top: 15px; margin-bottom: 5px; font-weight: 500; }
-        .dropzone { border: 2px dashed var(--border-color); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; transition: background-color 0.2s; }
-        .dropzone:hover { background-color: #f9f9f9; }
-        .images-preview { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-        .images-preview .img-wrapper { position: relative; }
-        .images-preview img { width: 80px; height: 80px; border-radius: 5px; object-fit: cover; }
-        .images-preview .remove-img-btn { position: absolute; top: -5px; right: -5px; background: var(--danger-color); color: white; border: none; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1;}
-        #pin-links-container .link-item { display: flex; justify-content: space-between; align-items: center; background: #f0f0f0; padding: 5px 10px; border-radius: 5px; margin-bottom: 5px; }
-        #pin-links-container .remove-link-btn { background: none; border: none; color: var(--danger-color); cursor: pointer; font-size: 1.2rem; }
-
+        
         #notification-container { position: fixed; top: 20px; right: 20px; z-index: 4000; display: flex; flex-direction: column; align-items: flex-end; }
         .notification-toast { display: flex; align-items: center; gap: 15px; color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-weight: 500; min-width: 250px; animation: slideInRight 0.4s ease-out forwards; }
         .notification-toast.fade-out { animation: fadeOut 0.5s ease-in forwards; }
@@ -124,10 +106,10 @@
         @keyframes slideInRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeOut { to { opacity: 0; transform: scale(0.9); } }
 
-        .mobile-fab { display: none; } /* Oculto por padrão, ativado pela classe .touch-device */
-        .custom-scrollbar { display: block; } /* Visível por padrão, oculto pela classe .touch-device */
+        /* --- LÓGICA DE RESPONSIVIDADE CORRIGIDA --- */
+        .mobile-fab { display: none; }
+        .custom-scrollbar { display: block; }
 
-        /* --- ESTILOS PARA DISPOSITIVOS DE TOQUE (TABLET/CELULAR) --- */
         body.touch-device .custom-scrollbar { display: none; }
         body.touch-device .mobile-fab { 
             display: flex; position: absolute; top: 15px; right: 15px; width: 50px; height: 50px; 
@@ -138,11 +120,10 @@
         body.touch-device .sidebar {
             position: fixed; top: 0; left: 0; height: 100%;
             z-index: 2000; transform: translateX(-100%);
-            -webkit-overflow-scrolling: touch; /* Habilita rolagem com inércia */
+            -webkit-overflow-scrolling: touch;
         }
         body.touch-device .sidebar.open { transform: translateX(0); }
 
-        /* --- MEDIA QUERIES PARA PEQUENOS AJUSTES DE TEXTO --- */
         @media (max-width: 768px) {
             .header h1 { font-size: 1.5rem; }
             .menu-btn { font-size: 1.5rem; }
@@ -363,7 +344,7 @@
         const deleteCurrentPin = () => { if (!state.editingPin || !confirm("Tem certeza que deseja excluir este pin?")) return; const aula = state.aulas.find(a => a.id === state.activeAulaId); if (!aula || !aula.pins) return; aula.pins = aula.pins.filter(p => p.id !== state.editingPin.id); loadPinsForCurrentAula(); ui.pinModal.style.display = 'none'; state.editingPin = null; };
         const clearAllMapPins = () => { map.eachLayer(layer => { if (layer.options.isPin) map.removeLayer(layer); }); };
         const loadPinsForCurrentAula = () => { clearAllMapPins(); const a = state.aulas.find(a => a.id === state.activeAulaId); if (a?.pins) a.pins.forEach(addPinToMap); };
-        const addPinToMap = (pinData) => { const icon = L.divIcon({ className: 'custom-pin-icon', html: `<i class="fas fa-map-marker-alt pin-background" style="color: ${pinData.color || '#e74c3c'};"></i><span class="pin-text">${pinData.title.charAt(0).toUpperCase()}</span>`, iconSize: [30, 42], iconAnchor: [15, 42] }); const marker = L.marker(pinData.latlng, { icon, isPin: true, pinId: pinData.id }).addTo(map); let content = `<div class="pin-popup-content"><h4>${pinData.title}</h4>`; if (pinData.description) content += `<p>${pinData.description.replace(/\n/g, '<br>')}</p>`; if (pinData.images?.length > 0) { content += '<div class="images-container">'; pinData.images.forEach(img => content += `<img src="${img}">`); content += '</div>'; } if (pinData.links?.length > 0) { content += '<div class="links-container">'; pinData.links.forEach(link => { if (link.type === 'youtube') { content += `<div class="youtube-embed"><iframe src="https://www.youtube.com/embed/${getYouTubeId(link.url)}" frameborder="0" allowfullscreen></iframe></div>`; } else { content += `<a href="${link.url}" target="_blank">${link.url}</a>`; } }); content += '</div>'; } content += '</div>'; marker.bindPopup(content); marker.on('dblclick', () => openPinModalForEdit(pinData)); };
+        const addPinToMap = (pinData) => { const icon = L.divIcon({ className: 'custom-pin-icon', html: `<i class="fas fa-map-marker-alt pin-background" style="color: ${pinData.color || '#e74c3c'};"></i><span class="pin-text">${pinData.title.charAt(0).toUpperCase()}</span>`, iconSize: [30, 42], iconAnchor: [15, 42] }); const marker = L.marker(pinData.latlng, { icon, isPin: true, pinId: pinData.id }).addTo(map); let content = `<h4>${pinData.title}</h4>`; if (pinData.description) content += `<p>${pinData.description.replace(/\n/g, '<br>')}</p>`; if (pinData.images?.length > 0) { content += '<div class="images-container">'; pinData.images.forEach(img => content += `<img src="${img}">`); content += '</div>'; } if (pinData.links?.length > 0) { content += '<div class="links-container">'; pinData.links.forEach(link => { if (link.type === 'youtube') { content += `<div class="youtube-embed"><iframe src="https://www.youtube.com/embed/${getYouTubeId(link.url)}" frameborder="0" allowfullscreen></iframe></div>`; } else { content += `<a href="${link.url}" target="_blank">${link.url}</a>`; } }); content += '</div>'; } marker.bindPopup(`<div class="pin-popup-content">${content}</div>`); marker.on('dblclick', () => openPinModalForEdit(pinData)); };
         const updateDrawingMode = () => { const c = ui.mapContainer; const isDraw = state.currentInteractionMode === 'draw'; const isPin = state.currentInteractionMode === 'pin'; const a = !!state.activeAulaId; c.classList.toggle('drawing-enabled', a && (isDraw || isPin)); c.classList.toggle('pin-mode', a && isPin); c.style.cursor = a ? 'crosshair' : 'grab'; };
         const clearAll = () => { if (!confirm("Isso limpará TODOS os desenhos e pins desta aula. Deseja continuar?")) return; if (state.activeAulaId) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) { a.drawings = []; a.pins = []; } queueRedraw(); loadPinsForCurrentAula(); }};
         const undoLast = () => { if (!state.activeAulaId) return; const a = state.aulas.find(a => a.id === state.activeAulaId); if (a?.drawings?.length > 0) { a.drawings.pop(); queueRedraw(); } };
@@ -413,12 +394,7 @@
             if (!isTouchDevice) { setupScrollbarDrag(ui.hThumb, ui.hScroll, true); setupScrollbarDrag(ui.vThumb, ui.vScroll, false); }
             map.on('move zoomend', updateScrollbars);
             
-            // CORREÇÃO: Usa ResizeObserver para o bug da tela branca
-            const resizeObserver = new ResizeObserver(() => {
-                if(state.currentView === 'caderno') {
-                    map.invalidateSize();
-                }
-            });
+            const resizeObserver = new ResizeObserver(() => { if(state.currentView === 'caderno') { map.invalidateSize(); } });
             resizeObserver.observe(ui.cadernoView);
 
             renderBiblioteca(); renderFavorites();
