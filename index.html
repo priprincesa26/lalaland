@@ -38,7 +38,7 @@
         .main-content { display: flex; flex: 1; overflow: hidden; position: relative; }
 
         #biblioteca-view { padding: 2rem; overflow-y: auto; }
-        #biblioteca-view .biblioteca-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        #biblioteca-view .biblioteca-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
         #biblioteca-view h2 { margin: 0; color: var(--primary-color); }
         .biblioteca-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
         .aula-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; }
@@ -52,15 +52,8 @@
         
         .map-wrapper { flex: 1; position: relative; overflow: hidden; }
         #map { height: 100%; width: 100%; background-color: #add8e6; }
-        .custom-scrollbar { position: absolute; background: rgba(0, 0, 0, 0.2); border-radius: 7px; opacity: 0; transition: opacity 0.3s ease-in-out; z-index: 1000; }
-        .map-wrapper:hover .custom-scrollbar { opacity: 1; }
-        .custom-scrollbar .thumb { background: rgba(0, 0, 0, 0.5); border-radius: 7px; border: 1px solid rgba(255, 255, 255, 0.3); cursor: pointer; position: absolute; }
-        .custom-scrollbar .thumb:hover { background: rgba(0, 0, 0, 0.7); }
-        .custom-scrollbar.horizontal { bottom: 0; left: 0; width: 100%; height: 14px; }
-        .custom-scrollbar.horizontal .thumb { height: 100%; top: 0; }
-        .custom-scrollbar.vertical { top: 0; right: 0; width: 14px; height: 100%; }
-        .custom-scrollbar.vertical .thumb { width: 100%; left: 0; }
         .sidebar { width: 350px; background-color: var(--background-color); padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 1002; transition: transform 0.3s ease; }
+        .sidebar-aula-title { background-color: var(--primary-color); color: white; padding: 15px; margin: -1rem -1rem 1rem -1rem; font-size: 1.1rem; text-align: center; }
         .sidebar-section { background-color: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 1rem 1.5rem; margin-bottom: 1.5rem; }
         .sidebar-section h3 { margin-top: 0; color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
         .tool-group { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding-bottom: 0.75rem; margin-bottom: 0.75rem; border-bottom: 1px solid var(--background-color); }
@@ -131,22 +124,28 @@
         @keyframes slideInRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeOut { to { opacity: 0; transform: scale(0.9); } }
 
-        .mobile-fab { display: none; position: absolute; top: 15px; right: 15px; width: 50px; height: 50px; background-color: var(--primary-color); color: white; border: none; border-radius: 50%; font-size: 1.4rem; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; z-index: 1001; align-items: center; justify-content: center; }
+        .mobile-fab { display: none; } /* Oculto por padrão, ativado pela classe .touch-device */
+        .custom-scrollbar { display: block; } /* Visível por padrão, oculto pela classe .touch-device */
 
-        @media (max-width: 900px) {
-            .custom-scrollbar { display: none; }
+        /* --- ESTILOS PARA DISPOSITIVOS DE TOQUE (TABLET/CELULAR) --- */
+        body.touch-device .custom-scrollbar { display: none; }
+        body.touch-device .mobile-fab { 
+            display: flex; position: absolute; top: 15px; right: 15px; width: 50px; height: 50px; 
+            background-color: var(--primary-color); color: white; border: none; border-radius: 50%; 
+            font-size: 1.4rem; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; 
+            z-index: 1001; align-items: center; justify-content: center; 
+        }
+        body.touch-device .sidebar {
+            position: fixed; top: 0; left: 0; height: 100%;
+            z-index: 2000; transform: translateX(-100%);
+            -webkit-overflow-scrolling: touch; /* Habilita rolagem com inércia */
+        }
+        body.touch-device .sidebar.open { transform: translateX(0); }
+
+        /* --- MEDIA QUERIES PARA PEQUENOS AJUSTES DE TEXTO --- */
+        @media (max-width: 768px) {
             .header h1 { font-size: 1.5rem; }
             .menu-btn { font-size: 1.5rem; }
-            
-            .sidebar {
-                position: fixed; top: 0; left: 0; height: 100%;
-                z-index: 2000; transform: translateX(-100%);
-                /* CORREÇÃO: Habilita a rolagem por toque com inércia */
-                -webkit-overflow-scrolling: touch;
-            }
-            .sidebar.open { transform: translateX(0); }
-            .mobile-fab { display: flex; }
-
             #biblioteca-view { padding: 1.5rem 1rem; }
             #biblioteca-view h2 { font-size: 1.5rem; }
         }
@@ -169,6 +168,7 @@
     <div id="caderno-view" style="display: none;">
         <div class="main-content">
             <div class="sidebar">
+                <h3 id="active-aula-title" class="sidebar-aula-title">Nenhuma aula carregada</h3>
                 <div class="sidebar-section" style="padding: 1rem;">
                     <button id="save-aula-button" title="Salvar todas as modificações no navegador">
                         <i class="fas fa-save"></i>
@@ -244,34 +244,28 @@
             </div>
         </div>
     </div>
-
+    
     <div class="modal" id="pin-modal">
       <div class="modal-content" style="max-width: 500px; text-align: left;">
         <h3 id="pin-modal-title" class="modal-title">Adicionar Pin</h3>
-        
         <label>Título:</label>
         <input type="text" id="pin-title" class="modal-input" placeholder="Título que aparecerá no mapa">
-        
         <label>Cor do Pin:</label>
         <input type="color" id="pin-color-input" value="#e74c3c">
-
         <label>Descrição:</label>
         <textarea id="pin-description" class="modal-input" rows="4" placeholder="Detalhes, notas, curiosidades..."></textarea>
-
         <label>Imagens (arraste e solte, cole ou clique):</label>
         <div id="pin-image-dropzone" class="dropzone">
           <div id="pin-images-preview" class="images-preview"></div>
           <p>Clique ou cole (Ctrl+V) imagens aqui</p>
         </div>
         <input type="file" id="image-upload" accept="image/*" multiple style="display: none;">
-
         <label>Links:</label>
         <div id="pin-links-container"></div>
         <div style="display: flex; gap: 10px; margin-top: 10px;">
             <input type="text" id="link-url-input" class="modal-input" placeholder="Cole a URL aqui" style="margin: 0; flex-grow: 1;">
             <button id="add-link-btn" class="modal-button confirm" style="padding: 10px;">Adicionar</button>
         </div>
-
         <div class="modal-buttons" style="margin-top: 20px;">
           <button id="delete-pin-btn" class="modal-button cancel" style="display: none; margin-right: auto;">Excluir Pin</button>
           <button id="cancel-pin" class="modal-button cancel">Cancelar</button>
@@ -279,7 +273,7 @@
         </div>
       </div>
     </div>
-
+    
     <div id="notification-container"></div>
     
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -287,25 +281,16 @@
     document.addEventListener('DOMContentLoaded', () => {
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         const ui = {
-            menuBtn: document.getElementById('menu-btn'),
-            navDrawer: document.getElementById('nav-drawer'),
-            overlay: document.getElementById('overlay'),
-            navLinks: document.querySelectorAll('.nav-link'),
-            cadernoView: document.getElementById('caderno-view'),
-            bibliotecaView: document.getElementById('biblioteca-view'),
-            bibliotecaGrid: document.getElementById('biblioteca-grid'),
-            newAulaBtnLib: document.getElementById('new-aula-btn-lib'),
-            mobileToolsBtn: document.getElementById('mobile-tools-btn'),
-            
-            mapContainer: document.getElementById('map'), sidebar: document.querySelector('.sidebar'),
-            newAulaModal: document.getElementById('new-aula-modal'), pinModal: document.getElementById('pin-modal'),
-            brushToolBtn: document.getElementById('brush-tool'),
-            eraserToolBtn: document.getElementById('eraser-tool'), pinToolBtn: document.getElementById('pin-tool'),
-            undoBtn: document.getElementById('undo-button'), clearBtn: document.getElementById('clear-button'),
-            saveAulaBtn: document.getElementById('save-aula-button'), sizeSlider: document.getElementById('brush-size'),
-            sizeLabel: document.getElementById('brush-size-label'), opacitySlider: document.getElementById('opacity-slider'),
-            opacityLabel: document.getElementById('opacity-label'), opacityContainer: document.getElementById('opacity-container'),
-            colorPicker: document.getElementById('color-picker'), favoritesPalette: document.getElementById('favorites-palette'),
+            menuBtn: document.getElementById('menu-btn'), navDrawer: document.getElementById('nav-drawer'), overlay: document.getElementById('overlay'),
+            navLinks: document.querySelectorAll('.nav-link'), cadernoView: document.getElementById('caderno-view'),
+            bibliotecaView: document.getElementById('biblioteca-view'), bibliotecaGrid: document.getElementById('biblioteca-grid'),
+            newAulaBtnLib: document.getElementById('new-aula-btn-lib'), mobileToolsBtn: document.getElementById('mobile-tools-btn'),
+            mapContainer: document.getElementById('map'), sidebar: document.querySelector('.sidebar'), activeAulaTitle: document.getElementById('active-aula-title'),
+            newAulaModal: document.getElementById('new-aula-modal'), pinModal: document.getElementById('pin-modal'), brushToolBtn: document.getElementById('brush-tool'),
+            eraserToolBtn: document.getElementById('eraser-tool'), pinToolBtn: document.getElementById('pin-tool'), undoBtn: document.getElementById('undo-button'),
+            clearBtn: document.getElementById('clear-button'), saveAulaBtn: document.getElementById('save-aula-button'), sizeSlider: document.getElementById('brush-size'),
+            sizeLabel: document.getElementById('brush-size-label'), opacitySlider: document.getElementById('opacity-slider'), opacityLabel: document.getElementById('opacity-label'),
+            opacityContainer: document.getElementById('opacity-container'), colorPicker: document.getElementById('color-picker'), favoritesPalette: document.getElementById('favorites-palette'),
             hScroll: document.querySelector('.custom-scrollbar.horizontal'), vScroll: document.querySelector('.custom-scrollbar.vertical'),
             hThumb: document.querySelector('.custom-scrollbar.horizontal .thumb'), vThumb: document.querySelector('.custom-scrollbar.vertical .thumb'),
         };
@@ -313,21 +298,12 @@
             isDrawing: false, isMapPanning: false, lastPanPoint: null, currentTool: 'brush', brushSize: 5, color: '#e74c3c', opacity: 1.0,
             favoriteColors: ["#e74c3c", "#2ecc71", "#3498db", "#f1c40f", "#9b59b6", "#34495e", "#ffffff", "#000000"],
             aulas: [], activeAulaId: null, currentStroke: null, isRedrawQueued: false, isDraggingThumb: false,
-            currentInteractionMode: 'draw', editingPin: null, isTwoFingerPanning: false, lastPanMidpoint: null,
-            currentView: 'biblioteca'
+            currentInteractionMode: 'draw', editingPin: null, isTwoFingerPanning: false, lastPanMidpoint: null, currentView: 'biblioteca'
         };
         
-        const showNotification = (message, type = 'success', duration = 3000) => {
-            const container = document.getElementById('notification-container'); const toast = document.createElement('div');
-            toast.className = `notification-toast ${type}`; const icons = { success: 'fa-check-circle', error: 'fa-times-circle' };
-            toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`; container.appendChild(toast);
-            setTimeout(() => { toast.classList.add('fade-out'); toast.addEventListener('animationend', () => toast.remove()); }, duration);
-        };
+        const showNotification = (message, type = 'success', duration = 3000) => { const container = document.getElementById('notification-container'); const toast = document.createElement('div'); toast.className = `notification-toast ${type}`; const icons = { success: 'fa-check-circle', error: 'fa-times-circle' }; toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`; container.appendChild(toast); setTimeout(() => { toast.classList.add('fade-out'); toast.addEventListener('animationend', () => toast.remove()); }, duration); };
         
-        const map = L.map(ui.mapContainer, {
-            center: [20, 0], zoom: 3, minZoom: 2, worldCopyJump: true, maxBounds: [[-90, -180], [90, 180]],
-            maxBoundsViscosity: 1.0, zoomControl: false, dragging: false, touchZoom: isTouchDevice, scrollWheelZoom: true,
-        });
+        const map = L.map(ui.mapContainer, { center: [20, 0], zoom: 3, minZoom: 2, worldCopyJump: true, maxBounds: [[-90, -180], [90, 180]], maxBoundsViscosity: 1.0, zoomControl: false, dragging: false, touchZoom: isTouchDevice, scrollWheelZoom: true });
         L.control.zoom({ position: 'topright' }).addTo(map);
         
         const mapLayers = { political: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }), physical: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap' }), satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' }), night: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO' }) };
@@ -337,51 +313,15 @@
             onAdd: function(map) { this._map = map; this._canvas = L.DomUtil.create('canvas', 'leaflet-canvas-layer'); map.getPanes().overlayPane.appendChild(this._canvas); this._update(); map.on('moveend resize', this._update, this); },
             onRemove: function(map) { map.getPanes().overlayPane.removeChild(this._canvas); map.off('moveend resize', this._update, this); },
             _update: function() { const size = this._map.getSize(); this._canvas.width = size.x; this._canvas.height = size.y; const topLeft = this._map.containerPointToLayerPoint([0, 0]); L.DomUtil.setPosition(this._canvas, topLeft); this.redraw(); },
-            redraw: function() {
-                const ctx = this._canvas.getContext('2d'); ctx.clearRect(0, 0, this._canvas.width, this._canvas.height); if (!state.activeAulaId) return;
-                const aula = state.aulas.find(a => a.id === state.activeAulaId); if (!aula) return; aula.drawings.forEach(stroke => this._drawStroke(stroke, ctx));
-                if (state.isDrawing && state.currentStroke) this._drawStroke(state.currentStroke, ctx);
-            },
-            _drawStroke: function(stroke, ctx) {
-                if (!stroke || stroke.points.length < 1) return;
-                ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
-                ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = stroke.size; ctx.strokeStyle = stroke.color; ctx.globalAlpha = stroke.opacity;
-                const points = stroke.points.map(latlng => this._map.latLngToContainerPoint(latlng));
-                if (points.length < 2) { ctx.beginPath(); ctx.fillStyle = ctx.strokeStyle; ctx.arc(points[0].x, points[0].y, stroke.size/2, 0, 2*Math.PI); ctx.fill(); return; }
-                ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y);
-                for (let i = 1; i < points.length - 2; i++) { const c = (points[i].x + points[i+1].x) / 2; const d = (points[i].y + points[i+1].y) / 2; ctx.quadraticCurveTo(points[i].x, points[i].y, c, d); }
-                ctx.quadraticCurveTo(points[points.length-2].x, points[points.length-2].y, points[points.length-1].x, points[points.length-1].y); ctx.stroke();
-                ctx.globalCompositeOperation = 'source-over';
-            }
+            redraw: function() { const ctx = this._canvas.getContext('2d'); ctx.clearRect(0, 0, this._canvas.width, this._canvas.height); if (!state.activeAulaId) return; const aula = state.aulas.find(a => a.id === state.activeAulaId); if (!aula) return; aula.drawings.forEach(stroke => this._drawStroke(stroke, ctx)); if (state.isDrawing && state.currentStroke) this._drawStroke(state.currentStroke, ctx); },
+            _drawStroke: function(stroke, ctx) { if (!stroke || stroke.points.length < 1) return; ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = stroke.size; ctx.strokeStyle = stroke.color; ctx.globalAlpha = stroke.opacity; const points = stroke.points.map(latlng => this._map.latLngToContainerPoint(latlng)); if (points.length < 2) { ctx.beginPath(); ctx.fillStyle = ctx.strokeStyle; ctx.arc(points[0].x, points[0].y, stroke.size/2, 0, 2*Math.PI); ctx.fill(); return; } ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y); for (let i = 1; i < points.length - 2; i++) { const c = (points[i].x + points[i+1].x) / 2; const d = (points[i].y + points[i+1].y) / 2; ctx.quadraticCurveTo(points[i].x, points[i].y, c, d); } ctx.quadraticCurveTo(points[points.length-2].x, points[points.length-2].y, points[points.length-1].x, points[points.length-1].y); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
         });
         const canvasOverlay = new CanvasOverlay().addTo(map);
         const queueRedraw = () => { if (!state.isRedrawQueued) { state.isRedrawQueued = true; requestAnimationFrame(() => { canvasOverlay.redraw(); state.isRedrawQueued = false; }); } };
         
-        const onPointerDown = (e) => {
-            if (e.target && !e.target.classList.contains('leaflet-container')) return;
-            if (isTouchDevice) {
-                if (e.pointerType === 'pen') { L.DomEvent.stop(e); }
-                if (e.pointerType === 'touch' || state.isTwoFingerPanning) { return; }
-            }
-            if (state.currentInteractionMode === 'pin') { openPinModalForNew(map.mouseEventToLatLng(e)); return; }
-            if (state.activeAulaId) {
-                state.isDrawing = true;
-                state.currentStroke = { tool: state.currentTool, color: state.currentTool === 'eraser' ? 'rgba(0,0,0,1)' : state.color, size: state.brushSize, opacity: state.currentTool === 'eraser' ? 1.0 : state.opacity, points: [map.mouseEventToLatLng(e)] };
-            } else if (!isTouchDevice) {
-                state.isMapPanning = true; state.lastPanPoint = map.mouseEventToContainerPoint(e); ui.mapContainer.style.cursor = 'grabbing';
-            }
-        };
-        const onPointerMove = (e) => {
-            if (isTouchDevice && (e.pointerType === 'touch' || state.isTwoFingerPanning)) return;
-            if (state.isDrawing) { state.currentStroke.points.push(map.mouseEventToLatLng(e)); queueRedraw(); }
-            else if (state.isMapPanning) { const p = map.mouseEventToContainerPoint(e); const o = p.subtract(state.lastPanPoint); state.lastPanPoint = p; map.panBy(o.multiplyBy(-1), { animate: false }); }
-        };
-        const onPointerUp = (e) => {
-            if (isTouchDevice && e.pointerType === 'touch') return;
-            if (state.isDrawing) { if (state.currentStroke?.points.length > 1) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) a.drawings.push(state.currentStroke); } state.currentStroke = null; queueRedraw(); }
-            state.isDrawing = false; state.isMapPanning = false; updateDrawingMode();
-        };
-
+        const onPointerDown = (e) => { if (e.target && !e.target.classList.contains('leaflet-container')) return; if (isTouchDevice) { if (e.pointerType === 'pen') { L.DomEvent.stop(e); } if (e.pointerType === 'touch' || state.isTwoFingerPanning) { return; } } if (state.currentInteractionMode === 'pin') { openPinModalForNew(map.mouseEventToLatLng(e)); return; } if (state.activeAulaId) { state.isDrawing = true; state.currentStroke = { tool: state.currentTool, color: state.currentTool === 'eraser' ? 'rgba(0,0,0,1)' : state.color, size: state.brushSize, opacity: state.currentTool === 'eraser' ? 1.0 : state.opacity, points: [map.mouseEventToLatLng(e)] }; } else if (!isTouchDevice) { state.isMapPanning = true; state.lastPanPoint = map.mouseEventToContainerPoint(e); ui.mapContainer.style.cursor = 'grabbing'; } };
+        const onPointerMove = (e) => { if (isTouchDevice && (e.pointerType === 'touch' || state.isTwoFingerPanning)) return; if (state.isDrawing) { state.currentStroke.points.push(map.mouseEventToLatLng(e)); queueRedraw(); } else if (state.isMapPanning) { const p = map.mouseEventToContainerPoint(e); const o = p.subtract(state.lastPanPoint); state.lastPanPoint = p; map.panBy(o.multiplyBy(-1), { animate: false }); } };
+        const onPointerUp = (e) => { if (isTouchDevice && e.pointerType === 'touch') return; if (state.isDrawing) { if (state.currentStroke?.points.length > 1) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) a.drawings.push(state.currentStroke); } state.currentStroke = null; queueRedraw(); } state.isDrawing = false; state.isMapPanning = false; updateDrawingMode(); };
         const handleTouchStart = (e) => { if (e.touches.length === 2) { e.preventDefault(); state.isTwoFingerPanning = true; const p1 = map.mouseEventToContainerPoint(e.touches[0]); const p2 = map.mouseEventToContainerPoint(e.touches[1]); state.lastPanMidpoint = L.point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2); } };
         const handleTouchMove = (e) => { if (state.isTwoFingerPanning && e.touches.length === 2) { e.preventDefault(); const p1 = map.mouseEventToContainerPoint(e.touches[0]); const p2 = map.mouseEventToContainerPoint(e.touches[1]); const currentMidpoint = L.point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2); const offset = currentMidpoint.subtract(state.lastPanMidpoint); state.lastPanMidpoint = currentMidpoint; map.panBy(offset.multiplyBy(-1), { animate: false }); } };
         const handleTouchEnd = (e) => { if (e.touches.length < 2) { state.isTwoFingerPanning = false; state.lastPanMidpoint = null; } };
@@ -394,36 +334,21 @@
             const isCaderno = viewName === 'caderno';
             ui.cadernoView.style.display = isCaderno ? 'block' : 'none';
             ui.bibliotecaView.style.display = isCaderno ? 'none' : 'block';
-            ui.mobileToolsBtn.style.display = isCaderno && window.innerWidth <= 900 ? 'flex' : 'none';
             
             ui.navLinks.forEach(link => link.classList.toggle('active', link.dataset.view === viewName));
             
-            if (isCaderno) {
-                // CORREÇÃO: Força a revalidação do mapa com um pequeno delay
-                setTimeout(() => map.invalidateSize(), 10); 
-            } else { 
-                state.activeAulaId = null; 
-                renderBiblioteca(); 
-            }
+            if (isCaderno) { if (!state.activeAulaId) ui.activeAulaTitle.textContent = "Nenhuma aula carregada"; } 
+            else { state.activeAulaId = null; renderBiblioteca(); }
 
             if(ui.navDrawer.classList.contains('open')) { toggleNavDrawer(); }
         };
 
-        const renderBiblioteca = () => {
-            ui.bibliotecaGrid.innerHTML = '';
-            if (state.aulas.length === 0) { ui.bibliotecaGrid.innerHTML = '<p>Nenhuma aula encontrada. Crie uma para começar!</p>'; return; }
-            state.aulas.forEach(aula => {
-                const card = document.createElement('div'); card.className = 'aula-card';
-                card.innerHTML = `<h4>${aula.name}</h4><div class="aula-card-actions"><button class="btn btn-load" data-id="${aula.id}"><i class="fas fa-edit"></i> Carregar</button><button class="btn btn-delete" data-id="${aula.id}"><i class="fas fa-trash"></i> Excluir</button></div>`;
-                ui.bibliotecaGrid.appendChild(card);
-            });
-        };
-
+        const renderBiblioteca = () => { ui.bibliotecaGrid.innerHTML = ''; if (state.aulas.length === 0) { ui.bibliotecaGrid.innerHTML = '<p>Nenhuma aula encontrada. Crie uma para começar!</p>'; return; } state.aulas.forEach(aula => { const card = document.createElement('div'); card.className = 'aula-card'; card.innerHTML = `<h4>${aula.name}</h4><div class="aula-card-actions"><button class="btn btn-load" data-id="${aula.id}"><i class="fas fa-edit"></i> Carregar</button><button class="btn btn-delete" data-id="${aula.id}"><i class="fas fa-trash"></i> Excluir</button></div>`; ui.bibliotecaGrid.appendChild(card); }); };
         const loadAulasFromStorage = () => { try { const s = localStorage.getItem('geoCadernoAulas'); state.aulas = s ? JSON.parse(s) : []; } catch (e) { console.error("Failed to load aulas:", e); state.aulas = []; } };
         const saveAulasToStorage = () => localStorage.setItem('geoCadernoAulas', JSON.stringify(state.aulas));
         const openNewAulaModal = () => { const d = `Aula de ${new Date().toLocaleDateString('pt-BR')}`; document.getElementById('aula-name-input').value = d; ui.newAulaModal.style.display = 'flex'; document.getElementById('aula-name-input').select(); };
         const createNewAula = (name) => { const newAula = { id: Date.now(), name: name, mapType: currentMapLayer, drawings: [], pins: [] }; state.aulas.unshift(newAula); saveAulasToStorage(); ui.newAulaModal.style.display = 'none'; showNotification('Nova aula criada!'); loadAula(newAula.id); };
-        const loadAula = (id) => { const a = state.aulas.find(a => a.id === id); if (!a) return; state.activeAulaId = id; updateDrawingMode(); switchMap(a.mapType); queueRedraw(); loadPinsForCurrentAula(); switchView('caderno'); };
+        const loadAula = (id) => { const a = state.aulas.find(a => a.id === id); if (!a) return; state.activeAulaId = id; ui.activeAulaTitle.textContent = a.name; updateDrawingMode(); switchMap(a.mapType); queueRedraw(); loadPinsForCurrentAula(); switchView('caderno'); };
         const deleteAula = (id) => { if (!confirm("Tem certeza que deseja excluir esta aula?")) return; state.aulas = state.aulas.filter(a => a.id !== id); if (state.activeAulaId === id) { state.activeAulaId = null; } saveAulasToStorage(); renderBiblioteca(); showNotification('Aula excluída.', 'error'); };
         
         const openPinModalForNew = (latlng) => { state.editingPin = { id: Date.now(), latlng, title: '', description: '', images: [], links: [], color: '#e74c3c' }; document.getElementById('pin-modal-title').innerText = 'Adicionar Novo Pin'; document.getElementById('delete-pin-btn').style.display = 'none'; clearPinModal(); ui.pinModal.style.display = 'flex'; };
@@ -447,6 +372,7 @@
         const updateActiveTool = (tool) => { const isPin = tool === 'pin'; const isEraser = tool === 'eraser'; state.currentInteractionMode = isPin ? 'pin' : 'draw'; if (!isPin) state.currentTool = tool; ui.opacityContainer.classList.toggle('disabled', isEraser); ui.brushToolBtn.classList.toggle('active', tool === 'brush'); ui.eraserToolBtn.classList.toggle('active', isEraser); ui.pinToolBtn.classList.toggle('active', isPin); updateDrawingMode(); };
         
         const initializeApp = () => {
+            if (isTouchDevice) document.body.classList.add('touch-device');
             loadAulasFromStorage();
             
             ui.menuBtn.addEventListener('click', toggleNavDrawer);
@@ -455,22 +381,15 @@
             ui.mobileToolsBtn.addEventListener('click', toggleToolsSidebar);
 
             ui.newAulaBtnLib.addEventListener('click', openNewAulaModal);
-            ui.bibliotecaGrid.addEventListener('click', (e) => {
-                const loadBtn = e.target.closest('.btn-load'); const deleteBtn = e.target.closest('.btn-delete');
-                if (loadBtn) { loadAula(Number(loadBtn.dataset.id)); } 
-                else if (deleteBtn) { deleteAula(Number(deleteBtn.dataset.id)); }
-            });
+            ui.bibliotecaGrid.addEventListener('click', (e) => { const loadBtn = e.target.closest('.btn-load'); const deleteBtn = e.target.closest('.btn-delete'); if (loadBtn) { loadAula(Number(loadBtn.dataset.id)); } else if (deleteBtn) { deleteAula(Number(deleteBtn.dataset.id)); } });
 
             const mapContainer = ui.mapContainer;
             mapContainer.addEventListener('pointerdown', onPointerDown);
             window.addEventListener('pointermove', onPointerMove);
             window.addEventListener('pointerup', onPointerUp);
             window.addEventListener('pointercancel', onPointerUp);
-            if (isTouchDevice) {
-                mapContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-                mapContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-                mapContainer.addEventListener('touchend', handleTouchEnd);
-            }
+            if (isTouchDevice) { mapContainer.addEventListener('touchstart', handleTouchStart, { passive: false }); mapContainer.addEventListener('touchmove', handleTouchMove, { passive: false }); mapContainer.addEventListener('touchend', handleTouchEnd); }
+            
             document.getElementById('confirm-new-aula').addEventListener('click', () => { const n = document.getElementById('aula-name-input').value.trim(); if (n) createNewAula(n); else showNotification("Por favor, insira um nome.", "error"); });
             document.getElementById('cancel-new-aula').addEventListener('click', () => ui.newAulaModal.style.display = 'none');
             ui.newAulaModal.addEventListener('click', (e) => { if(e.target === ui.newAulaModal) ui.newAulaModal.style.display = 'none'; });
@@ -494,10 +413,16 @@
             if (!isTouchDevice) { setupScrollbarDrag(ui.hThumb, ui.hScroll, true); setupScrollbarDrag(ui.vThumb, ui.vScroll, false); }
             map.on('move zoomend', updateScrollbars);
             
-            renderBiblioteca();
-            renderFavorites();
-            selectColor(state.favoriteColors[0]);
-            switchMap('political');
+            // CORREÇÃO: Usa ResizeObserver para o bug da tela branca
+            const resizeObserver = new ResizeObserver(() => {
+                if(state.currentView === 'caderno') {
+                    map.invalidateSize();
+                }
+            });
+            resizeObserver.observe(ui.cadernoView);
+
+            renderBiblioteca(); renderFavorites();
+            selectColor(state.favoriteColors[0]); switchMap('political');
             switchView('biblioteca'); 
             setTimeout(updateScrollbars, 500);
         };
