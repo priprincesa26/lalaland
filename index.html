@@ -34,7 +34,15 @@
         .nav-drawer li a.active { background-color: var(--theme-color); color: white; border-left-color: #a6116d; font-weight: bold; }
         .nav-drawer li a i { width: 25px; text-align: center; }
 
-        #caderno-view, #biblioteca-view { height: calc(100vh - 78px); }
+        /* A correção está aqui: A view do caderno precisa ser um container flex */
+        #caderno-view {
+            height: calc(100vh - 78px);
+            display: flex;
+        }
+        #biblioteca-view, #links-view { 
+            height: calc(100vh - 78px); 
+        }
+
         .main-content { display: flex; flex: 1; overflow: hidden; position: relative; }
 
         #biblioteca-view { padding: 2rem; overflow-y: auto; }
@@ -50,6 +58,15 @@
         .aula-card-actions .btn-delete { background-color: var(--danger-color); color: white; }
         .aula-card-actions .btn-delete:hover { background-color: #c0392b; }
         
+        #links-view { padding: 2rem; overflow-y: auto; background-color: #fff; }
+        #links-view .links-container { max-width: 800px; margin: 0 auto; }
+        #links-view h2 { color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
+        #links-view ul { list-style: none; padding: 0; }
+        #links-view li { margin-bottom: 1.5rem; }
+        #links-view a { display: inline-flex; align-items: center; gap: 15px; padding: 15px 20px; background-color: var(--background-color); border-radius: 10px; text-decoration: none; color: var(--primary-color); font-weight: 500; font-size: 1.1rem; transition: all 0.2s ease; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box; }
+        #links-view a:hover { transform: translateY(-3px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); background-color: #fff; border-color: var(--secondary-color); }
+        #links-view a i { color: var(--theme-color); font-size: 1.5rem; }
+
         .map-wrapper {
             flex: 1;
             position: relative;
@@ -72,9 +89,25 @@
         .custom-scrollbar.horizontal .thumb { height: 100%; top: 0; }
         .custom-scrollbar.vertical { top: 0; right: 0; width: 14px; height: 100%; }
         .custom-scrollbar.vertical .thumb { width: 100%; left: 0; }
-        .sidebar { width: 350px; background-color: var(--background-color); padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 1002; transition: transform 0.3s ease; }
+        
+        /* CSS da sidebar com a rolagem garantida e o layout flex restaurado */
+        .sidebar { 
+            width: 350px; 
+            background-color: var(--background-color); 
+            padding: 1rem; 
+            overflow-y: auto; 
+            display: flex;
+            flex-direction: column;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.1); 
+            z-index: 1002; 
+            transition: transform 0.3s ease; 
+        }
+
         .sidebar-section { background-color: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 1rem 1.5rem; margin-bottom: 1.5rem; }
         .sidebar-section h3 { margin-top: 0; color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
+        #aula-title-section { flex-shrink: 0; /* Impede que o título encolha */ }
+        #aula-title-section h3 { font-size: 1.1rem; text-align: center; border: none; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #aula-title-section i { color: var(--theme-color); margin-right: 8px; }
         .tool-group { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding-bottom: 0.75rem; margin-bottom: 0.75rem; border-bottom: 1px solid var(--background-color); }
         .tool-group:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .tool { background-color: #f0f0f0; border: 2px solid transparent; border-radius: 8px; width: 45px; height: 45px; cursor: pointer; font-size: 1.4rem; color: var(--primary-color); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
@@ -173,12 +206,17 @@
         <ul>
             <li><a href="#" data-view="biblioteca" class="nav-link"><i class="fas fa-book"></i> Biblioteca de Aulas</a></li>
             <li><a href="#" data-view="caderno" class="nav-link"><i class="fas fa-pen-ruler"></i> Caderno Interativo</a></li>
+            <li><a href="#" data-view="links" class="nav-link"><i class="fas fa-link"></i> Links</a></li>
         </ul>
     </nav>
     
     <div id="caderno-view" style="display: none;">
         <div class="main-content">
             <div class="sidebar">
+                <div class="sidebar-section" id="aula-title-section" style="padding: 0.5rem 1rem;">
+                    <h3><i class="fas fa-chalkboard-teacher"></i><span id="current-aula-title">Nenhuma Aula Carregada</span></h3>
+                </div>
+
                 <div class="sidebar-section" style="padding: 1rem;">
                     <button id="save-aula-button" title="Salvar todas as modificações no navegador">
                         <i class="fas fa-save"></i>
@@ -244,6 +282,17 @@
         <div class="biblioteca-grid" id="biblioteca-grid"></div>
     </div>
     
+    <div id="links-view" style="display: none;">
+        <div class="links-container">
+            <h2><i class="fas fa-globe"></i> Links Úteis</h2>
+            <ul>
+                <li><a href="https://x.com/studies_lala" target="_blank" rel="noopener noreferrer"><i class="fab fa-twitter"></i> Twitter @studies_lala</a></li>
+                <li><a href="https://priprincesa26.github.io/studies_lala/" target="_blank" rel="noopener noreferrer"><i class="fas fa-star"></i> Studies LaLa</a></li>
+                <li><a href="https://priprincesa26.github.io/f-bricadereda-es/" target="_blank" rel="noopener noreferrer"><i class="fas fa-pencil-ruler"></i> Fábrica de Redações</a></li>
+            </ul>
+        </div>
+    </div>
+
     <!-- MODAL DE NOVA AULA (COMPLETO) -->
     <div class="modal" id="new-aula-modal">
         <div class="modal-content">
@@ -305,6 +354,7 @@
             navLinks: document.querySelectorAll('.nav-link'),
             cadernoView: document.getElementById('caderno-view'),
             bibliotecaView: document.getElementById('biblioteca-view'),
+            linksView: document.getElementById('links-view'),
             bibliotecaGrid: document.getElementById('biblioteca-grid'),
             newAulaBtnLib: document.getElementById('new-aula-btn-lib'),
             mobileToolsBtn: document.getElementById('mobile-tools-btn'),
@@ -319,7 +369,7 @@
             opacityLabel: document.getElementById('opacity-label'), opacityContainer: document.getElementById('opacity-container'),
             colorPicker: document.getElementById('color-picker'), favoritesPalette: document.getElementById('favorites-palette'),
             hScroll: document.querySelector('.custom-scrollbar.horizontal'), vScroll: document.querySelector('.custom-scrollbar.vertical'),
-            hThumb: document.querySelector('.custom-scrollbar.horizontal .thumb'), vThumb: document.querySelector('.custom-scrollbar.vertical .thumb'),
+            currentAulaTitle: document.getElementById('current-aula-title'),
         };
         let state = {
             isDrawing: false, isMapPanning: false, lastPanPoint: null, currentTool: 'brush', brushSize: 5, color: '#e74c3c', opacity: 1.0,
@@ -403,15 +453,21 @@
         
         const switchView = (viewName) => {
             state.currentView = viewName;
-            const isCaderno = viewName === 'caderno';
-            ui.cadernoView.style.display = isCaderno ? 'block' : 'none';
-            ui.bibliotecaView.style.display = isCaderno ? 'none' : 'block';
-            ui.mobileToolsBtn.style.display = isCaderno && window.innerWidth <= 900 ? 'flex' : 'none';
+            
+            ui.cadernoView.style.display = viewName === 'caderno' ? 'flex' : 'none';
+            ui.bibliotecaView.style.display = viewName === 'biblioteca' ? 'block' : 'none';
+            ui.linksView.style.display = viewName === 'links' ? 'block' : 'none';
+
+            ui.mobileToolsBtn.style.display = viewName === 'caderno' && window.innerWidth <= 900 ? 'flex' : 'none';
             
             ui.navLinks.forEach(link => link.classList.toggle('active', link.dataset.view === viewName));
             
-            if (isCaderno) { map.invalidateSize(); } 
-            else { state.activeAulaId = null; renderBiblioteca(); }
+            if (viewName === 'caderno') { map.invalidateSize(); } 
+            else { 
+                state.activeAulaId = null; 
+                ui.currentAulaTitle.textContent = 'Nenhuma Aula Carregada';
+                renderBiblioteca(); 
+            }
 
             if(ui.navDrawer.classList.contains('open')) { toggleNavDrawer(); }
         };
@@ -430,7 +486,19 @@
         const saveAulasToStorage = () => localStorage.setItem('geoCadernoAulas', JSON.stringify(state.aulas));
         const openNewAulaModal = () => { const d = `Aula de ${new Date().toLocaleDateString('pt-BR')}`; document.getElementById('aula-name-input').value = d; ui.newAulaModal.style.display = 'flex'; document.getElementById('aula-name-input').select(); };
         const createNewAula = (name) => { const newAula = { id: Date.now(), name: name, mapType: currentMapLayer, drawings: [], pins: [] }; state.aulas.unshift(newAula); saveAulasToStorage(); ui.newAulaModal.style.display = 'none'; showNotification('Nova aula criada!'); loadAula(newAula.id); };
-        const loadAula = (id) => { const a = state.aulas.find(a => a.id === id); if (!a) return; state.activeAulaId = id; updateDrawingMode(); switchMap(a.mapType); queueRedraw(); loadPinsForCurrentAula(); switchView('caderno'); };
+        
+        const loadAula = (id) => { 
+            const a = state.aulas.find(a => a.id === id); 
+            if (!a) return; 
+            state.activeAulaId = id; 
+            ui.currentAulaTitle.textContent = a.name;
+            ui.currentAulaTitle.title = a.name;
+            updateDrawingMode(); 
+            switchMap(a.mapType); 
+            queueRedraw(); 
+            loadPinsForCurrentAula(); 
+            switchView('caderno'); 
+        };
         const deleteAula = (id) => { if (!confirm("Tem certeza que deseja excluir esta aula?")) return; state.aulas = state.aulas.filter(a => a.id !== id); if (state.activeAulaId === id) { state.activeAulaId = null; } saveAulasToStorage(); renderBiblioteca(); showNotification('Aula excluída.', 'error'); };
         
         const openPinModalForNew = (latlng) => { state.editingPin = { id: Date.now(), latlng, title: '', description: '', images: [], links: [], color: '#e74c3c' }; document.getElementById('pin-modal-title').innerText = 'Adicionar Novo Pin'; document.getElementById('delete-pin-btn').style.display = 'none'; clearPinModal(); ui.pinModal.style.display = 'flex'; };
@@ -501,21 +569,19 @@
             if (!isTouchDevice) { setupScrollbarDrag(ui.hThumb, ui.hScroll, true); setupScrollbarDrag(ui.vThumb, ui.vScroll, false); }
             map.on('move zoomend', updateScrollbars);
             
-            // Função para notificar o Leaflet sobre a mudança de tamanho, com debounce
             const debounceResize = () => {
                 let timer;
                 return () => {
                     clearTimeout(timer);
                     timer = setTimeout(() => {
                         if (map) {
-                           map.invalidateSize(); // Esta é a função mágica do Leaflet
+                           map.invalidateSize();
                            updateScrollbars();
                         }
-                    }, 150); // Atraso de 150ms para esperar o fim do redimensionamento
+                    }, 150);
                 };
             };
             
-            // Adiciona o listener à janela
             window.addEventListener('resize', debounceResize());
 
             renderBiblioteca();
