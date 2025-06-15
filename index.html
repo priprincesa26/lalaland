@@ -140,13 +140,126 @@
     </style>
 </head>
 <body>
-    <div class="header"><!-- Conteúdo do Header Completo --></div>
+    <div class="header">
+        <button id="menu-btn" class="menu-btn" title="Menu"><i class="fas fa-bars"></i></button>
+        <h1>LaLa Land: o mundo é o seu caderno</h1>
+    </div>
+
     <div class="overlay" id="overlay"></div>
-    <nav class="nav-drawer" id="nav-drawer"><!-- Conteúdo do Menu Completo --></nav>
-    <div id="caderno-view" style="display: none;"><!-- Conteúdo do Caderno Completo --></div>
-    <div id="biblioteca-view"><!-- Conteúdo da Biblioteca Completo --></div>
-    <div class="modal" id="new-aula-modal"><!-- Conteúdo do Modal Completo --></div>
-    <div class="modal" id="pin-modal"><!-- Conteúdo do Modal Completo --></div>
+    <nav class="nav-drawer" id="nav-drawer">
+        <ul>
+            <li><a href="#" data-view="biblioteca" class="nav-link"><i class="fas fa-book"></i> Biblioteca de Aulas</a></li>
+            <li><a href="#" data-view="caderno" class="nav-link"><i class="fas fa-pen-ruler"></i> Caderno Interativo</a></li>
+        </ul>
+    </nav>
+    
+    <div id="caderno-view" style="display: none;">
+        <div class="main-content">
+            <div class="sidebar">
+                <h3 id="active-aula-title" class="sidebar-aula-title">Nenhuma aula carregada</h3>
+                <div class="sidebar-section" style="padding: 1rem;">
+                    <button id="save-aula-button" title="Salvar todas as modificações no navegador">
+                        <i class="fas fa-save"></i>
+                        <span>Salvar modificações</span>
+                    </button>
+                </div>
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-layer-group"></i> Tipos de Mapa</h3>
+                    <div class="map-type-container">
+                        <button class="map-type-btn" data-map="political"><i class="fas fa-map"></i> Político</button>
+                        <button class="map-type-btn" data-map="physical"><i class="fas fa-mountain"></i> Físico</button>
+                        <button class="map-type-btn" data-map="satellite"><i class="fas fa-satellite"></i> Satélite</button>
+                        <button class="map-type-btn" data-map="night"><i class="fas fa-moon"></i> Noturno</button>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-paint-brush"></i> Ferramentas</h3>
+                    <div class="tool-group">
+                        <button id="brush-tool" class="tool active" title="Pincel"><i class="fas fa-pen"></i></button>
+                        <button id="eraser-tool" class="tool" title="Borracha"><i class="fas fa-eraser"></i></button>
+                        <button id="pin-tool" class="tool" title="Adicionar Pin"><i class="fas fa-map-marker-alt"></i></button>
+                        <button id="undo-button" class="tool" title="Desfazer"><i class="fas fa-undo"></i></button>
+                        <button id="clear-button" class="tool" title="Limpar Tudo"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                    <div class="tool-group">
+                        <div class="slider-container">
+                            <label for="brush-size" title="Tamanho"><i class="fas fa-text-height"></i></label>
+                            <input type="range" id="brush-size" min="1" max="100" value="5"><span id="brush-size-label">5</span>
+                        </div>
+                    </div>
+                     <div class="tool-group">
+                         <div class="slider-container" id="opacity-container">
+                            <label for="opacity-slider" title="Opacidade"><i class="fas fa-eye-dropper"></i></label>
+                            <input type="range" id="opacity-slider" min="1" max="100" value="100"><span id="opacity-label">100%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-palette"></i> Paleta de Cores</h3>
+                    <div class="tool-group">
+                        <label for="color-picker">Cor Livre:</label>
+                        <input type="color" id="color-picker" title="Escolher Cor Livre" value="#e74c3c">
+                    </div>
+                    <div class="favorites-palette" id="favorites-palette"></div>
+                </div>
+            </div>
+            <div class="map-wrapper">
+                <div id="map"></div>
+                <button id="mobile-tools-btn" class="mobile-fab" title="Ferramentas"><i class="fas fa-wrench"></i></button>
+                <div class="custom-scrollbar horizontal"><div class="thumb"></div></div>
+                <div class="custom-scrollbar vertical"><div class="thumb"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="biblioteca-view">
+        <div class="biblioteca-header">
+            <h2><i class="fas fa-book-open"></i> Minhas Aulas</h2>
+            <button id="new-aula-btn-lib"><i class="fas fa-plus-circle"></i> Adicionar Nova Aula</button>
+        </div>
+        <div class="biblioteca-grid" id="biblioteca-grid"></div>
+    </div>
+    
+    <div class="modal" id="new-aula-modal">
+        <div class="modal-content">
+            <h3 class="modal-title">Criar Nova Aula</h3>
+            <input type="text" id="aula-name-input" class="modal-input" placeholder="Dê um nome à sua aula">
+            <div class="modal-buttons">
+                <button id="cancel-new-aula" class="modal-button cancel">Cancelar</button>
+                <button id="confirm-new-aula" class="modal-button confirm">Criar</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="pin-modal">
+      <div class="modal-content" style="max-width: 500px; text-align: left;">
+        <h3 id="pin-modal-title" class="modal-title">Adicionar Pin</h3>
+        <label>Título:</label>
+        <input type="text" id="pin-title" class="modal-input" placeholder="Título que aparecerá no mapa">
+        <label>Cor do Pin:</label>
+        <input type="color" id="pin-color-input" value="#e74c3c">
+        <label>Descrição:</label>
+        <textarea id="pin-description" class="modal-input" rows="4" placeholder="Detalhes, notas, curiosidades..."></textarea>
+        <label>Imagens (arraste e solte, cole ou clique):</label>
+        <div id="pin-image-dropzone" class="dropzone">
+          <div id="pin-images-preview" class="images-preview"></div>
+          <p>Clique ou cole (Ctrl+V) imagens aqui</p>
+        </div>
+        <input type="file" id="image-upload" accept="image/*" multiple style="display: none;">
+        <label>Links:</label>
+        <div id="pin-links-container"></div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <input type="text" id="link-url-input" class="modal-input" placeholder="Cole a URL aqui" style="margin: 0; flex-grow: 1;">
+            <button id="add-link-btn" class="modal-button confirm" style="padding: 10px;">Adicionar</button>
+        </div>
+        <div class="modal-buttons" style="margin-top: 20px;">
+          <button id="delete-pin-btn" class="modal-button cancel" style="display: none; margin-right: auto;">Excluir Pin</button>
+          <button id="cancel-pin" class="modal-button cancel">Cancelar</button>
+          <button id="save-pin" class="modal-button confirm">Salvar Pin</button>
+        </div>
+      </div>
+    </div>
+    
     <div id="notification-container"></div>
     
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -188,7 +301,7 @@
             map = L.map(ui.mapContainer, { center: [20, 0], zoom: 3, minZoom: 2, worldCopyJump: true, maxBounds: [[-90, -180], [90, 180]], maxBoundsViscosity: 1.0, zoomControl: false, dragging: true, touchZoom: true, scrollWheelZoom: true });
             L.control.zoom({ position: 'topright' }).addTo(map);
             
-            mapLayers = { political: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }), physical: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap' }), satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' }), night: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO' }) };
+            mapLayers = { political: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', noWrap: true }), physical: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', noWrap: true }), satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', noWrap: true }), night: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO', noWrap: true }) };
             mapLayers[currentMapLayer].addTo(map);
 
             const CanvasOverlay = L.Layer.extend({
@@ -233,7 +346,7 @@
         const saveAulasToStorage = () => localStorage.setItem('geoCadernoAulas', JSON.stringify(state.aulas));
         const openNewAulaModal = () => { const d = `Aula de ${new Date().toLocaleDateString('pt-BR')}`; document.getElementById('aula-name-input').value = d; ui.newAulaModal.style.display = 'flex'; document.getElementById('aula-name-input').select(); };
         const createNewAula = (name) => { const newAula = { id: Date.now(), name: name, mapType: currentMapLayer, drawings: [], pins: [] }; state.aulas.unshift(newAula); saveAulasToStorage(); ui.newAulaModal.style.display = 'none'; showNotification('Nova aula criada!'); loadAula(newAula.id); };
-        const loadAula = (id) => { initializeMap(); const a = state.aulas.find(a => a.id === id); if (!a) return; state.activeAulaId = id; ui.activeAulaTitle.textContent = a.name; updateActiveTool(state.currentTool); switchMap(a.mapType); queueRedraw(); loadPinsForCurrentAula(); switchView('caderno'); };
+        const loadAula = (id) => { initializeMap(); const a = state.aulas.find(a => a.id === id); if (!a) return; state.activeAulaId = id; ui.activeAulaTitle.textContent = a.name; updateActiveTool('brush'); switchMap(a.mapType); queueRedraw(); loadPinsForCurrentAula(); switchView('caderno'); };
         const deleteAula = (id) => { if (!confirm("Tem certeza que deseja excluir esta aula?")) return; state.aulas = state.aulas.filter(a => a.id !== id); if (state.activeAulaId === id) { state.activeAulaId = null; } saveAulasToStorage(); renderBiblioteca(); showNotification('Aula excluída.', 'error'); };
         
         const openPinModalForNew = (latlng) => { state.editingPin = { id: Date.now(), latlng, title: '', description: '', images: [], links: [], color: '#e74c3c' }; document.getElementById('pin-modal-title').innerText = 'Adicionar Novo Pin'; document.getElementById('delete-pin-btn').style.display = 'none'; clearPinModal(); ui.pinModal.style.display = 'flex'; };
@@ -248,10 +361,10 @@
         const deleteCurrentPin = () => { if (!state.editingPin || !confirm("Tem certeza que deseja excluir este pin?")) return; const aula = state.aulas.find(a => a.id === state.activeAulaId); if (!aula || !aula.pins) return; aula.pins = aula.pins.filter(p => p.id !== state.editingPin.id); loadPinsForCurrentAula(); ui.pinModal.style.display = 'none'; state.editingPin = null; };
         const clearAllMapPins = () => { if (!map) return; map.eachLayer(layer => { if (layer.options.isPin) map.removeLayer(layer); }); };
         const loadPinsForCurrentAula = () => { clearAllMapPins(); const a = state.aulas.find(a => a.id === state.activeAulaId); if (a?.pins) a.pins.forEach(addPinToMap); };
-        const addPinToMap = (pinData) => { const icon = L.divIcon({ className: 'custom-pin-icon', html: `<i class="fas fa-map-marker-alt" style="font-size: 2.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.4); line-height: 1; color: ${pinData.color || '#e74c3c'};"></i><span style="position: absolute; top: 8px; left: 0; right: 0; font-size: 1rem; font-weight: bold; color: white; text-shadow: 1px 1px 2px black; pointer-events: none;">${pinData.title.charAt(0).toUpperCase()}</span>` }); const marker = L.marker(pinData.latlng, { icon, isPin: true, pinId: pinData.id }).addTo(map); let content = `<div class="pin-popup-content"><h4>${pinData.title}</h4>`; if (pinData.description) content += `<p>${pinData.description.replace(/\n/g, '<br>')}</p>`; if (pinData.images?.length > 0) { content += '<div class="images-container">'; pinData.images.forEach(img => content += `<img src="${img}" style="max-width: 100%; border-radius: 5px; margin-top: 5px;">`); content += '</div>'; } if (pinData.links?.length > 0) { content += '<div class="links-container">'; pinData.links.forEach(link => { if (link.type === 'youtube') { content += `<div class="youtube-embed" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; background: #000; margin: 10px 0;"><iframe src="https://www.youtube.com/embed/${getYouTubeId(link.url)}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" frameborder="0" allowfullscreen></iframe></div>`; } else { content += `<a href="${link.url}" target="_blank" style="display: block; margin: 5px 0; color: var(--secondary-color); word-break: break-all;">${link.url}</a>`; } }); content += '</div>'; } marker.bindPopup(content); marker.on('dblclick', () => openPinModalForEdit(pinData)); };
+        const addPinToMap = (pinData) => { const icon = L.divIcon({ className: '', html: `<div style="position: relative; text-align: center;"><i class="fas fa-map-marker-alt" style="font-size: 2.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.4); line-height: 1; color: ${pinData.color || '#e74c3c'};"></i><span style="position: absolute; top: 8px; left: 0; right: 0; font-size: 1rem; font-weight: bold; color: white; text-shadow: 1px 1px 2px black; pointer-events: none;">${pinData.title.charAt(0).toUpperCase()}</span></div>`, iconSize: [30, 42], iconAnchor: [15, 42] }); const marker = L.marker(pinData.latlng, { icon, isPin: true, pinId: pinData.id }).addTo(map); let content = `<div class="pin-popup-content"><h4>${pinData.title}</h4>`; if (pinData.description) content += `<p>${pinData.description.replace(/\n/g, '<br>')}</p>`; if (pinData.images?.length > 0) { content += '<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">'; pinData.images.forEach(img => content += `<img src="${img}" style="max-width: 100%; border-radius: 5px; margin-top: 5px;">`); content += '</div>'; } if (pinData.links?.length > 0) { content += '<div style="margin-top: 10px;">'; pinData.links.forEach(link => { if (link.type === 'youtube') { content += `<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; background: #000; margin: 10px 0;"><iframe src="https://www.youtube.com/embed/${getYouTubeId(link.url)}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" frameborder="0" allowfullscreen></iframe></div>`; } else { content += `<a href="${link.url}" target="_blank" style="display: block; margin: 5px 0; color: var(--secondary-color); word-break: break-all;">${link.url}</a>`; } }); content += '</div>'; } content += `</div>`; marker.bindPopup(content); marker.on('dblclick', () => openPinModalForEdit(pinData)); };
         const clearAll = () => { if (!confirm("Isso limpará TODOS os desenhos e pins desta aula. Deseja continuar?")) return; if (state.activeAulaId) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) { a.drawings = []; a.pins = []; } queueRedraw(); loadPinsForCurrentAula(); }};
         const undoLast = () => { if (!state.activeAulaId) return; const a = state.aulas.find(a => a.id === state.activeAulaId); if (a?.drawings?.length > 0) { a.drawings.pop(); queueRedraw(); } };
-        const switchMap = (mapType) => { if (mapLayers[mapType] && mapType !== currentMapLayer) { map.removeLayer(mapLayers[currentMapLayer]); currentMapLayer = mapType; map.addLayer(mapLayers[currentMapLayer]); if(state.activeAulaId) { const a = state.aulas.find(a => a.id === state.activeAulaId); if(a) a.mapType = mapType; } } document.querySelectorAll('.map-type-btn').forEach(b => b.classList.toggle('selected', b.dataset.map === mapType)); };
+        const switchMap = (mapType) => { if (map && mapLayers[mapType] && mapType !== currentMapLayer) { map.removeLayer(mapLayers[currentMapLayer]); currentMapLayer = mapType; map.addLayer(mapLayers[currentMapLayer]); if(state.activeAulaId) { const a = state.aulas.find(a => a.id === state.activeAulaId); if(a) a.mapType = mapType; } } document.querySelectorAll('.map-type-btn').forEach(b => b.classList.toggle('selected', b.dataset.map === mapType)); };
         const selectColor = (color) => { state.color = color; ui.colorPicker.value = color; document.querySelectorAll('.fav-swatch').forEach(s => s.style.borderColor = s.style.backgroundColor === color ? 'var(--primary-color)' : 'transparent'); updateActiveTool('brush'); };
         
         const updateActiveTool = (tool) => {
@@ -289,11 +402,8 @@
                 const btn = e.target.closest('.btn');
                 if (!btn) return;
                 const id = Number(btn.dataset.id);
-                if (btn.classList.contains('btn-load')) {
-                    loadAula(id);
-                } else if (btn.classList.contains('btn-delete')) {
-                    deleteAula(id);
-                }
+                if (btn.classList.contains('btn-load')) { loadAula(id); } 
+                else if (btn.classList.contains('btn-delete')) { deleteAula(id); }
             });
             
             document.getElementById('confirm-new-aula').addEventListener('click', () => { const n = document.getElementById('aula-name-input').value.trim(); if (n) createNewAula(n); else showNotification("Por favor, insira um nome.", "error"); });
@@ -321,6 +431,7 @@
             window.addEventListener('resize', () => { if (state.currentView === 'caderno' && mapInitialized) { setTimeout(() => map.invalidateSize(), 100); } });
 
             renderBiblioteca(); renderFavorites();
+            updateActiveTool('brush');
             switchView('biblioteca'); 
             setTimeout(() => { if (!isTouchDevice) updateScrollbars() }, 500);
         };
