@@ -50,7 +50,7 @@
         .aula-card-actions .btn-delete { background-color: var(--danger-color); color: white; }
         .aula-card-actions .btn-delete:hover { background-color: #c0392b; }
         
-        .map-wrapper { flex: 1; position: relative; overflow: hidden; }
+        .map-wrapper { flex: 1; position: relative; overflow: hidden; min-height: 300px; height: 100%; }
         #map { height: 100%; width: 100%; background-color: #add8e6; }
         
         .sidebar { width: 350px; background-color: var(--background-color); padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 1002; }
@@ -286,15 +286,19 @@
             hThumb: document.querySelector('.custom-scrollbar.horizontal .thumb'), vThumb: document.querySelector('.custom-scrollbar.vertical .thumb'),
         };
         let state = {
-            isDrawing: false, isMapPanning: false, lastPanPoint: null, currentTool: 'brush', brushSize: 5, color: '#e74c3c', opacity: 1.0,
+            isDrawing: false, currentTool: 'brush', brushSize: 5, color: '#e74c3c', opacity: 1.0,
             favoriteColors: ["#e74c3c", "#2ecc71", "#3498db", "#f1c40f", "#9b59b6", "#34495e", "#ffffff", "#000000"],
-            aulas: [], activeAulaId: null, currentStroke: null, isRedrawQueued: false, isDraggingThumb: false,
-            currentInteractionMode: 'draw', editingPin: null, isTwoFingerPanning: false, lastPanMidpoint: null, currentView: 'biblioteca'
+            aulas: [], activeAulaId: null, currentStroke: null, isRedrawQueued: false,
+            currentInteractionMode: 'draw', editingPin: null, currentView: 'biblioteca'
         };
         
         const showNotification = (message, type = 'success', duration = 3000) => { const container = document.getElementById('notification-container'); const toast = document.createElement('div'); toast.className = `notification-toast ${type}`; const icons = { success: 'fa-check-circle', error: 'fa-times-circle' }; toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`; container.appendChild(toast); setTimeout(() => { toast.classList.add('fade-out'); toast.addEventListener('animationend', () => toast.remove()); }, duration); };
         
-        const map = L.map(ui.mapContainer, { center: [20, 0], zoom: 3, minZoom: 2, worldCopyJump: true, maxBounds: [[-90, -180], [90, 180]], maxBoundsViscosity: 1.0, zoomControl: false, dragging: false, touchZoom: isTouchDevice, scrollWheelZoom: true });
+        const map = L.map(ui.mapContainer, {
+            center: [20, 0], zoom: 3, minZoom: 2, worldCopyJump: true,
+            maxBounds: [[-90, -180], [90, 180]], maxBoundsViscosity: 1.0,
+            zoomControl: false, dragging: true, touchZoom: true, scrollWheelZoom: true
+        });
         L.control.zoom({ position: 'topright' }).addTo(map);
         
         const mapLayers = { political: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }), physical: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap' }), satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' }), night: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO' }) };
@@ -310,12 +314,18 @@
         const canvasOverlay = new CanvasOverlay().addTo(map);
         const queueRedraw = () => { if (!state.isRedrawQueued) { state.isRedrawQueued = true; requestAnimationFrame(() => { canvasOverlay.redraw(); state.isRedrawQueued = false; }); } };
         
-        const onPointerDown = (e) => { if (e.target && !e.target.classList.contains('leaflet-container')) return; if (isTouchDevice) { if (e.pointerType === 'pen') { L.DomEvent.stop(e); } if (e.pointerType === 'touch' || state.isTwoFingerPanning) { return; } } if (state.currentInteractionMode === 'pin') { openPinModalForNew(map.mouseEventToLatLng(e)); return; } if (state.activeAulaId) { state.isDrawing = true; state.currentStroke = { tool: state.currentTool, color: state.currentTool === 'eraser' ? 'rgba(0,0,0,1)' : state.color, size: state.brushSize, opacity: state.currentTool === 'eraser' ? 1.0 : state.opacity, points: [map.mouseEventToLatLng(e)] }; } else if (!isTouchDevice) { state.isMapPanning = true; state.lastPanPoint = map.mouseEventToContainerPoint(e); ui.mapContainer.style.cursor = 'grabbing'; } };
-        const onPointerMove = (e) => { if (isTouchDevice && (e.pointerType === 'touch' || state.isTwoFingerPanning)) return; if (state.isDrawing) { state.currentStroke.points.push(map.mouseEventToLatLng(e)); queueRedraw(); } else if (state.isMapPanning) { const p = map.mouseEventToContainerPoint(e); const o = p.subtract(state.lastPanPoint); state.lastPanPoint = p; map.panBy(o.multiplyBy(-1), { animate: false }); } };
-        const onPointerUp = (e) => { if (isTouchDevice && e.pointerType === 'touch') return; if (state.isDrawing) { if (state.currentStroke?.points.length > 1) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) a.drawings.push(state.currentStroke); } state.currentStroke = null; queueRedraw(); } state.isDrawing = false; state.isMapPanning = false; updateDrawingMode(); };
-        const handleTouchStart = (e) => { if (e.touches.length === 2) { e.preventDefault(); state.isTwoFingerPanning = true; const p1 = map.mouseEventToContainerPoint(e.touches[0]); const p2 = map.mouseEventToContainerPoint(e.touches[1]); state.lastPanMidpoint = L.point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2); } };
-        const handleTouchMove = (e) => { if (state.isTwoFingerPanning && e.touches.length === 2) { e.preventDefault(); const p1 = map.mouseEventToContainerPoint(e.touches[0]); const p2 = map.mouseEventToContainerPoint(e.touches[1]); const currentMidpoint = L.point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2); const offset = currentMidpoint.subtract(state.lastPanMidpoint); state.lastPanMidpoint = currentMidpoint; map.panBy(offset.multiplyBy(-1), { animate: false }); } };
-        const handleTouchEnd = (e) => { if (e.touches.length < 2) { state.isTwoFingerPanning = false; state.lastPanMidpoint = null; } };
+        const onPointerDown = (e) => {
+            if (e.target.closest('.leaflet-control-container')) return;
+            if (state.currentInteractionMode === 'pin') { openPinModalForNew(map.mouseEventToLatLng(e.originalEvent)); return; }
+            state.isDrawing = true;
+            state.currentStroke = { tool: state.currentTool, color: state.currentTool === 'eraser' ? 'rgba(0,0,0,1)' : state.color, size: state.brushSize, opacity: state.currentTool === 'eraser' ? 1.0 : state.opacity, points: [e.latlng] };
+        };
+        const onPointerMove = (e) => { if (state.isDrawing) { state.currentStroke.points.push(e.latlng); queueRedraw(); } };
+        const onPointerUp = () => { if (state.isDrawing) { if (state.currentStroke?.points.length > 1) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) a.drawings.push(state.currentStroke); } state.currentStroke = null; queueRedraw(); } state.isDrawing = false; };
+        
+        map.on('mousedown', onPointerDown);
+        map.on('mousemove', onPointerMove);
+        map.on('mouseup', onPointerUp);
 
         const toggleNavDrawer = () => { ui.navDrawer.classList.toggle('open'); ui.overlay.classList.toggle('open-nav'); ui.sidebar.classList.remove('open'); ui.overlay.classList.remove('open-tools'); };
         const toggleToolsSidebar = () => { ui.sidebar.classList.toggle('open'); ui.overlay.classList.toggle('open-tools'); };
@@ -328,9 +338,13 @@
             
             ui.navLinks.forEach(link => link.classList.toggle('active', link.dataset.view === viewName));
             
-            if (isCaderno) { if (!state.activeAulaId) ui.activeAulaTitle.textContent = "Nenhuma aula carregada"; } 
-            else { state.activeAulaId = null; renderBiblioteca(); }
-
+            if (isCaderno) { 
+                if (!state.activeAulaId) { ui.activeAulaTitle.textContent = "Nenhuma aula carregada"; }
+                setTimeout(() => map.invalidateSize(), 100); 
+            } else { 
+                state.activeAulaId = null; 
+                renderBiblioteca(); 
+            }
             if(ui.navDrawer.classList.contains('open')) { toggleNavDrawer(); }
         };
 
@@ -339,7 +353,7 @@
         const saveAulasToStorage = () => localStorage.setItem('geoCadernoAulas', JSON.stringify(state.aulas));
         const openNewAulaModal = () => { const d = `Aula de ${new Date().toLocaleDateString('pt-BR')}`; document.getElementById('aula-name-input').value = d; ui.newAulaModal.style.display = 'flex'; document.getElementById('aula-name-input').select(); };
         const createNewAula = (name) => { const newAula = { id: Date.now(), name: name, mapType: currentMapLayer, drawings: [], pins: [] }; state.aulas.unshift(newAula); saveAulasToStorage(); ui.newAulaModal.style.display = 'none'; showNotification('Nova aula criada!'); loadAula(newAula.id); };
-        const loadAula = (id) => { const a = state.aulas.find(a => a.id === id); if (!a) return; state.activeAulaId = id; ui.activeAulaTitle.textContent = a.name; updateDrawingMode(); switchMap(a.mapType); queueRedraw(); loadPinsForCurrentAula(); switchView('caderno'); };
+        const loadAula = (id) => { const a = state.aulas.find(a => a.id === id); if (!a) return; state.activeAulaId = id; ui.activeAulaTitle.textContent = a.name; updateActiveTool(state.currentTool); switchMap(a.mapType); queueRedraw(); loadPinsForCurrentAula(); switchView('caderno'); };
         const deleteAula = (id) => { if (!confirm("Tem certeza que deseja excluir esta aula?")) return; state.aulas = state.aulas.filter(a => a.id !== id); if (state.activeAulaId === id) { state.activeAulaId = null; } saveAulasToStorage(); renderBiblioteca(); showNotification('Aula excluída.', 'error'); };
         
         const openPinModalForNew = (latlng) => { state.editingPin = { id: Date.now(), latlng, title: '', description: '', images: [], links: [], color: '#e74c3c' }; document.getElementById('pin-modal-title').innerText = 'Adicionar Novo Pin'; document.getElementById('delete-pin-btn').style.display = 'none'; clearPinModal(); ui.pinModal.style.display = 'flex'; };
@@ -355,12 +369,27 @@
         const clearAllMapPins = () => { map.eachLayer(layer => { if (layer.options.isPin) map.removeLayer(layer); }); };
         const loadPinsForCurrentAula = () => { clearAllMapPins(); const a = state.aulas.find(a => a.id === state.activeAulaId); if (a?.pins) a.pins.forEach(addPinToMap); };
         const addPinToMap = (pinData) => { const icon = L.divIcon({ className: 'custom-pin-icon', html: `<i class="fas fa-map-marker-alt pin-background" style="color: ${pinData.color || '#e74c3c'};"></i><span class="pin-text">${pinData.title.charAt(0).toUpperCase()}</span>`, iconSize: [30, 42], iconAnchor: [15, 42] }); const marker = L.marker(pinData.latlng, { icon, isPin: true, pinId: pinData.id }).addTo(map); let content = `<h4>${pinData.title}</h4>`; if (pinData.description) content += `<p>${pinData.description.replace(/\n/g, '<br>')}</p>`; if (pinData.images?.length > 0) { content += '<div class="images-container">'; pinData.images.forEach(img => content += `<img src="${img}">`); content += '</div>'; } if (pinData.links?.length > 0) { content += '<div class="links-container">'; pinData.links.forEach(link => { if (link.type === 'youtube') { content += `<div class="youtube-embed"><iframe src="https://www.youtube.com/embed/${getYouTubeId(link.url)}" frameborder="0" allowfullscreen></iframe></div>`; } else { content += `<a href="${link.url}" target="_blank">${link.url}</a>`; } }); content += '</div>'; } marker.bindPopup(`<div class="pin-popup-content">${content}</div>`); marker.on('dblclick', () => openPinModalForEdit(pinData)); };
-        const updateDrawingMode = () => { const c = ui.mapContainer; const isDraw = state.currentInteractionMode === 'draw'; const isPin = state.currentInteractionMode === 'pin'; const a = !!state.activeAulaId; c.classList.toggle('drawing-enabled', a && (isDraw || isPin)); c.classList.toggle('pin-mode', a && isPin); c.style.cursor = a ? 'crosshair' : 'grab'; };
         const clearAll = () => { if (!confirm("Isso limpará TODOS os desenhos e pins desta aula. Deseja continuar?")) return; if (state.activeAulaId) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) { a.drawings = []; a.pins = []; } queueRedraw(); loadPinsForCurrentAula(); }};
         const undoLast = () => { if (!state.activeAulaId) return; const a = state.aulas.find(a => a.id === state.activeAulaId); if (a?.drawings?.length > 0) { a.drawings.pop(); queueRedraw(); } };
         const switchMap = (mapType) => { if (mapLayers[mapType] && mapType !== currentMapLayer) { map.removeLayer(mapLayers[currentMapLayer]); currentMapLayer = mapType; map.addLayer(mapLayers[currentMapLayer]); if(state.activeAulaId) { const a = state.aulas.find(a => a.id === state.activeAulaId); if(a) a.mapType = mapType; } } document.querySelectorAll('.map-type-btn').forEach(b => b.classList.toggle('selected', b.dataset.map === mapType)); };
         const selectColor = (color) => { state.color = color; ui.colorPicker.value = color; document.querySelectorAll('.fav-swatch').forEach(s => s.style.borderColor = s.style.backgroundColor === color ? 'var(--primary-color)' : 'transparent'); updateActiveTool('brush'); };
-        const updateActiveTool = (tool) => { const isPin = tool === 'pin'; const isEraser = tool === 'eraser'; state.currentInteractionMode = isPin ? 'pin' : 'draw'; if (!isPin) state.currentTool = tool; ui.opacityContainer.classList.toggle('disabled', isEraser); ui.brushToolBtn.classList.toggle('active', tool === 'brush'); ui.eraserToolBtn.classList.toggle('active', isEraser); ui.pinToolBtn.classList.toggle('active', isPin); updateDrawingMode(); };
+        
+        const updateActiveTool = (tool) => {
+            const isPin = tool === 'pin';
+            const isEraser = tool === 'eraser';
+            const isDrawingTool = tool === 'brush' || tool === 'eraser';
+
+            state.currentInteractionMode = isPin ? 'pin' : 'draw';
+            if (!isPin) state.currentTool = tool;
+            
+            ui.opacityContainer.classList.toggle('disabled', isEraser);
+            ui.brushToolBtn.classList.toggle('active', tool === 'brush');
+            ui.eraserToolBtn.classList.toggle('active', isEraser);
+            ui.pinToolBtn.classList.toggle('active', isPin);
+            
+            if (isDrawingTool) { map.dragging.disable(); map.getContainer().style.cursor = 'crosshair'; } 
+            else { map.dragging.enable(); map.getContainer().style.cursor = 'grab'; }
+        };
         
         const initializeApp = () => {
             if (isTouchDevice) document.body.classList.add('touch-device');
@@ -373,13 +402,6 @@
 
             ui.newAulaBtnLib.addEventListener('click', openNewAulaModal);
             ui.bibliotecaGrid.addEventListener('click', (e) => { const loadBtn = e.target.closest('.btn-load'); const deleteBtn = e.target.closest('.btn-delete'); if (loadBtn) { loadAula(Number(loadBtn.dataset.id)); } else if (deleteBtn) { deleteAula(Number(deleteBtn.dataset.id)); } });
-
-            const mapContainer = ui.mapContainer;
-            mapContainer.addEventListener('pointerdown', onPointerDown);
-            window.addEventListener('pointermove', onPointerMove);
-            window.addEventListener('pointerup', onPointerUp);
-            window.addEventListener('pointercancel', onPointerUp);
-            if (isTouchDevice) { mapContainer.addEventListener('touchstart', handleTouchStart, { passive: false }); mapContainer.addEventListener('touchmove', handleTouchMove, { passive: false }); mapContainer.addEventListener('touchend', handleTouchEnd); }
             
             document.getElementById('confirm-new-aula').addEventListener('click', () => { const n = document.getElementById('aula-name-input').value.trim(); if (n) createNewAula(n); else showNotification("Por favor, insira um nome.", "error"); });
             document.getElementById('cancel-new-aula').addEventListener('click', () => ui.newAulaModal.style.display = 'none');
@@ -402,20 +424,14 @@
             const renderFavorites = () => { ui.favoritesPalette.innerHTML = ''; state.favoriteColors.forEach(c => { const s = document.createElement('div'); s.className = 'fav-swatch'; s.style.backgroundColor = c; s.addEventListener('click', () => selectColor(c)); ui.favoritesPalette.appendChild(s); }); };
             const setupScrollbarDrag=(t,s,i)=>{t.addEventListener("pointerdown",e=>{e.stopPropagation(),state.isDraggingThumb=!0;const o=o=>{let n=0,d=0;const a=map.getPixelWorldBounds().max.x-map.getPixelWorldBounds().min.x,r=map.getPixelWorldBounds().max.y-map.getPixelWorldBounds().min.y,l=map.getSize();i?(n=o.movementX*a/l.x):(d=o.movementY*r/l.y),map.panBy([n,d],{animate:!1})},n=()=>{state.isDraggingThumb=!1,window.removeEventListener("pointermove",o),window.removeEventListener("pointerup",n)};window.addEventListener("pointermove",o),window.addEventListener("pointerup",n)})};const updateScrollbars=()=>{if(isTouchDevice) return; const t=map.getSize(),s=map.getPixelWorldBounds(),e=map.getPixelBounds(),o=s.max.x-s.min.x,n=s.max.y-s.min.y,d=e.max.x-e.min.x,a=e.max.y-e.min.y,r=d/o*t.x,l=a/n*t.y,c=(e.min.x-s.min.x)/o*t.x,h=(e.min.y-s.min.y)/n*t.y;ui.hThumb.style.width=`${Math.max(r,15)}px`,ui.vThumb.style.height=`${Math.max(l,15)}px`,ui.hThumb.style.left=`${c}px`,ui.vThumb.style.top=`${h}px`};
             if (!isTouchDevice) { setupScrollbarDrag(ui.hThumb, ui.hScroll, true); setupScrollbarDrag(ui.vThumb, ui.vScroll, false); }
-            map.on('move zoomend', updateScrollbars);
+            map.on('moveend zoomend', updateScrollbars);
             
-            // CORREÇÃO: Usa ResizeObserver para monitorar o contêiner do caderno
-            const resizeObserver = new ResizeObserver(() => {
-                if(state.currentView === 'caderno') {
-                    map.invalidateSize();
-                }
-            });
-            resizeObserver.observe(ui.cadernoView);
+            window.addEventListener('resize', () => { if (state.currentView === 'caderno') { setTimeout(() => map.invalidateSize(), 100); } });
 
             renderBiblioteca(); renderFavorites();
             selectColor(state.favoriteColors[0]); switchMap('political');
             switchView('biblioteca'); 
-            setTimeout(updateScrollbars, 500);
+            setTimeout(() => { if (!isTouchDevice) updateScrollbars() }, 500);
         };
         initializeApp();
     });
