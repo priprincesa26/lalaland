@@ -33,17 +33,22 @@
         .nav-drawer li a:hover { background-color: #f0f3f4; }
         .nav-drawer li a.active { background-color: var(--theme-color); color: white; border-left-color: #a6116d; font-weight: bold; }
         .nav-drawer li a i { width: 25px; text-align: center; }
-
-        /* A correção está aqui: A view do caderno precisa ser um container flex */
+        
+        /* CORREÇÃO APLICADA AQUI */
         #caderno-view {
             height: calc(100vh - 78px);
-            display: flex;
+            display: flex; /* Garante que os filhos (main-content) ocupem o espaço */
         }
         #biblioteca-view, #links-view { 
             height: calc(100vh - 78px); 
         }
 
-        .main-content { display: flex; flex: 1; overflow: hidden; position: relative; }
+        .main-content { 
+            display: flex; 
+            flex: 1; 
+            position: relative; 
+            min-height: 0; /* Correção chave para o flexbox permitir a rolagem interna */
+        }
 
         #biblioteca-view { padding: 2rem; overflow-y: auto; }
         #biblioteca-view .biblioteca-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
@@ -90,24 +95,28 @@
         .custom-scrollbar.vertical { top: 0; right: 0; width: 14px; height: 100%; }
         .custom-scrollbar.vertical .thumb { width: 100%; left: 0; }
         
-        /* CSS da sidebar com a rolagem garantida e o layout flex restaurado */
         .sidebar { 
             width: 350px; 
             background-color: var(--background-color); 
             padding: 1rem; 
             overflow-y: auto; 
-            display: flex;
-            flex-direction: column;
             box-shadow: -5px 0 15px rgba(0,0,0,0.1); 
             z-index: 1002; 
-            transition: transform 0.3s ease; 
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
         }
 
-        .sidebar-section { background-color: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 1rem 1.5rem; margin-bottom: 1.5rem; }
+        .sidebar-section { background-color: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 1rem 1.5rem; margin-bottom: 1.5rem; flex-shrink: 0; }
         .sidebar-section h3 { margin-top: 0; color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
-        #aula-title-section { flex-shrink: 0; /* Impede que o título encolha */ }
         #aula-title-section h3 { font-size: 1.1rem; text-align: center; border: none; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         #aula-title-section i { color: var(--theme-color); margin-right: 8px; }
+        
+        /* Estilos para a nova seção de créditos */
+        #credit-section { background: none; box-shadow: none; text-align: center; padding: 1rem 0; margin-top: auto; }
+        .credit-text { font-size: 0.9rem; color: #7f8c8d; margin: 0 0 10px 0; }
+        .credit-heart { font-size: 2.5rem; color: var(--theme-color); }
+        
         .tool-group { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding-bottom: 0.75rem; margin-bottom: 0.75rem; border-bottom: 1px solid var(--background-color); }
         .tool-group:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .tool { background-color: #f0f0f0; border: 2px solid transparent; border-radius: 8px; width: 45px; height: 45px; cursor: pointer; font-size: 1.4rem; color: var(--primary-color); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
@@ -263,6 +272,12 @@
                         <input type="color" id="color-picker" title="Escolher Cor Livre" value="#e74c3c">
                     </div>
                     <div class="favorites-palette" id="favorites-palette"></div>
+                </div>
+                
+                <!-- Nova seção de créditos adicionada ao final da sidebar -->
+                <div class="sidebar-section" id="credit-section">
+                    <p class="credit-text">Esse projeto foi desenvolvido por:<br>Priscila "LaLa"</p>
+                    <i class="fas fa-heart credit-heart"></i>
                 </div>
             </div>
             <div class="map-wrapper">
@@ -462,7 +477,9 @@
             
             ui.navLinks.forEach(link => link.classList.toggle('active', link.dataset.view === viewName));
             
-            if (viewName === 'caderno') { map.invalidateSize(); } 
+            if (viewName === 'caderno') { 
+                setTimeout(() => map.invalidateSize(), 50); // Delay for flexbox to settle
+            } 
             else { 
                 state.activeAulaId = null; 
                 ui.currentAulaTitle.textContent = 'Nenhuma Aula Carregada';
