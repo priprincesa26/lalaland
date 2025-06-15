@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>LaLa Land: o mundo é o seu caderno</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
@@ -51,11 +51,10 @@
         .aula-card-actions .btn-delete:hover { background-color: #c0392b; }
         
         .map-wrapper { flex: 1; position: relative; overflow: hidden; }
-        #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #add8e6; }
-
+        #map { height: 100%; width: 100%; background-color: #add8e6; }
         .sidebar { width: 350px; background-color: var(--background-color); padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 1002; transition: transform 0.3s ease; }
-        
-        /* O restante dos estilos permanece o mesmo */
+
+        /* Estilos genéricos restantes... */
         .custom-scrollbar { position: absolute; background: rgba(0, 0, 0, 0.2); border-radius: 7px; opacity: 0; transition: opacity 0.3s ease-in-out; z-index: 1000; }
         .map-wrapper:hover .custom-scrollbar { opacity: 1; }
         .custom-scrollbar .thumb { background: rgba(0, 0, 0, 0.5); border-radius: 7px; border: 1px solid rgba(255, 255, 255, 0.3); cursor: pointer; position: absolute; }
@@ -136,52 +135,21 @@
             .header h1 { font-size: 1.5rem; }
             .menu-btn { font-size: 1.5rem; }
             
-            /* MELHORIA: Layout vertical para telas pequenas */
-            .main-content {
-                flex-direction: column;
-            }
-            .map-wrapper {
-                order: -1; /* Coloca o mapa em cima */
-                height: 60vh; /* Mapa ocupa 60% da altura da tela */
-                min-height: 250px;
-            }
+            /* Em telas pequenas, a sidebar de ferramentas se torna um drawer */
             .sidebar {
-                /* Sidebar ocupa o restante do espaço e tem seu próprio scroll */
-                width: 100%;
-                height: 40vh;
-                box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
-                /* Não é mais position: fixed na versão mobile */
+                position: fixed; top: 0; left: 0; height: 100%;
+                z-index: 2000; transform: translateX(-100%);
             }
-            .mobile-fab { 
-                /* O FAB não é mais necessário, pois a sidebar é sempre visível */
-                display: none; 
-            }
+            .sidebar.open { transform: translateX(0); }
+            /* O botão FAB controla a abertura da sidebar de ferramentas */
+            .mobile-fab { display: flex; }
+
             #biblioteca-view { padding: 1.5rem 1rem; }
             #biblioteca-view h2 { font-size: 1.5rem; }
-        }
-
-        @media (min-width: 901px) {
-             /* Esconde sidebar de ferramentas no desktop por padrão, aberta com botão */
-            .sidebar {
-                 position: fixed; 
-                top: 78px; /* Altura do header */
-                right: 0;
-                height: calc(100vh - 78px);
-                transform: translateX(100%);
-                z-index: 1002;
-            }
-            .sidebar.open {
-                transform: translateX(0);
-            }
-            .mobile-fab { /* Renomeado para 'tools-fab' seria mais adequado */
-                display: flex; 
-                top: 95px;
-            }
         }
     </style>
 </head>
 <body>
-    <!-- O HTML permanece o mesmo, a lógica de exibição é controlada pelo JS/CSS -->
     <div class="header">
         <button id="menu-btn" class="menu-btn" title="Menu"><i class="fas fa-bars"></i></button>
         <h1>LaLa Land: o mundo é o seu caderno</h1>
@@ -199,9 +167,11 @@
         <div class="main-content">
             <div class="map-wrapper">
                 <div id="map"></div>
+                <button id="mobile-tools-btn" class="mobile-fab" title="Ferramentas"><i class="fas fa-wrench"></i></button>
+                <div class="custom-scrollbar horizontal"><div class="thumb"></div></div>
+                <div class="custom-scrollbar vertical"><div class="thumb"></div></div>
             </div>
             <div class="sidebar">
-                <!-- Conteúdo da sidebar aqui, como antes -->
                 <div class="sidebar-section" style="padding: 1rem;">
                     <button id="save-aula-button" title="Salvar todas as modificações no navegador">
                         <i class="fas fa-save"></i>
@@ -248,10 +218,6 @@
                     <div class="favorites-palette" id="favorites-palette"></div>
                 </div>
             </div>
-             <!-- Botão de ferramentas movido para fora da sidebar -->
-            <button id="mobile-tools-btn" class="mobile-fab" title="Ferramentas"><i class="fas fa-wrench"></i></button>
-            <div class="custom-scrollbar horizontal"><div class="thumb"></div></div>
-            <div class="custom-scrollbar vertical"><div class="thumb"></div></div>
         </div>
     </div>
 
@@ -263,7 +229,7 @@
         <div class="biblioteca-grid" id="biblioteca-grid"></div>
     </div>
     
-    <!-- Todos os Modais permanecem os mesmos -->
+    <!-- MODAIS E NOTIFICAÇÕES (sem alterações) -->
     <div class="modal" id="new-aula-modal"> <div class="modal-content"> <h3 class="modal-title">Criar Nova Aula</h3> <input type="text" id="aula-name-input" class="modal-input" placeholder="Dê um nome à sua aula"> <div class="modal-buttons"> <button id="cancel-new-aula" class="modal-button cancel">Cancelar</button> <button id="confirm-new-aula" class="modal-button confirm">Criar</button> </div> </div> </div>
     <div class="modal" id="pin-modal"> <div class="modal-content" style="max-width: 500px; text-align: left;"> <h3 id="pin-modal-title" class="modal-title">Adicionar Pin</h3> <label>Título:</label> <input type="text" id="pin-title" class="modal-input" placeholder="Título que aparecerá no mapa"> <label>Cor do Pin:</label> <input type="color" id="pin-color-input" value="#e74c3c"> <label>Descrição:</label> <textarea id="pin-description" class="modal-input" rows="4" placeholder="Detalhes, notas, curiosidades..."></textarea> <label>Imagens (arraste e solte, cole ou clique):</label> <div id="pin-image-dropzone" class="dropzone"> <div id="pin-images-preview" class="images-preview"></div> <p>Clique ou cole (Ctrl+V) imagens aqui</p> </div> <input type="file" id="image-upload" accept="image/*" multiple style="display: none;"> <label>Links:</label> <div id="pin-links-container"></div> <div style="display: flex; gap: 10px; margin-top: 10px;"> <input type="text" id="link-url-input" class="modal-input" placeholder="Cole a URL aqui" style="margin: 0; flex-grow: 1;"> <button id="add-link-btn" class="modal-button confirm" style="padding: 10px;">Adicionar</button> </div> <div class="modal-buttons" style="margin-top: 20px;"> <button id="delete-pin-btn" class="modal-button cancel" style="display: none; margin-right: auto;">Excluir Pin</button> <button id="cancel-pin" class="modal-button cancel">Cancelar</button> <button id="save-pin" class="modal-button confirm">Salvar Pin</button> </div> </div> </div>
     <div id="notification-container"></div>
@@ -271,7 +237,6 @@
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // As declarações de 'ui' e 'state' permanecem as mesmas
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         const ui = {
             menuBtn: document.getElementById('menu-btn'),
@@ -304,14 +269,12 @@
             currentView: 'biblioteca'
         };
         
-        // As funções auxiliares (showNotification, etc.) permanecem as mesmas
         const showNotification = (message, type = 'success', duration = 3000) => { const container = document.getElementById('notification-container'); const toast = document.createElement('div'); toast.className = `notification-toast ${type}`; const icons = { success: 'fa-check-circle', error: 'fa-times-circle' }; toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`; container.appendChild(toast); setTimeout(() => { toast.classList.add('fade-out'); toast.addEventListener('animationend', () => toast.remove()); }, duration); };
 
-        // MELHORIA: Opções do mapa otimizadas
         const map = L.map(ui.mapContainer, {
             center: [20, 0], zoom: 3, minZoom: 2, worldCopyJump: true, maxBounds: [[-90, -180], [90, 180]],
             maxBoundsViscosity: 1.0, zoomControl: false, 
-            dragging: !isTouchDevice, // Melhora a experiência em touch
+            dragging: !isTouchDevice, 
             touchZoom: isTouchDevice, scrollWheelZoom: true,
         });
         L.control.zoom({ position: 'topright' }).addTo(map);
@@ -319,11 +282,10 @@
         const mapLayers = { political: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }), physical: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap' }), satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' }), night: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO' }) };
         let currentMapLayer = 'political'; mapLayers[currentMapLayer].addTo(map);
 
-        // O CanvasOverlay e as funções de desenho permanecem as mesmas
         const CanvasOverlay = L.Layer.extend({ onAdd: function(map) { this._map = map; this._canvas = L.DomUtil.create('canvas', 'leaflet-canvas-layer'); map.getPanes().overlayPane.appendChild(this._canvas); this._update(); map.on('moveend resize', this._update, this); }, onRemove: function(map) { map.getPanes().overlayPane.removeChild(this._canvas); map.off('moveend resize', this._update, this); }, _update: function() { const size = this._map.getSize(); this._canvas.width = size.x; this._canvas.height = size.y; const topLeft = this._map.containerPointToLayerPoint([0, 0]); L.DomUtil.setPosition(this._canvas, topLeft); this.redraw(); }, redraw: function() { const ctx = this._canvas.getContext('2d'); ctx.clearRect(0, 0, this._canvas.width, this._canvas.height); if (!state.activeAulaId) return; const aula = state.aulas.find(a => a.id === state.activeAulaId); if (!aula) return; aula.drawings.forEach(stroke => this._drawStroke(stroke, ctx)); if (state.isDrawing && state.currentStroke) this._drawStroke(state.currentStroke, ctx); }, _drawStroke: function(stroke, ctx) { if (!stroke || stroke.points.length < 1) return; ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = stroke.size; ctx.strokeStyle = stroke.color; ctx.globalAlpha = stroke.opacity; const points = stroke.points.map(latlng => this._map.latLngToContainerPoint(latlng)); if (points.length < 2) { ctx.beginPath(); ctx.fillStyle = ctx.strokeStyle; ctx.arc(points[0].x, points[0].y, stroke.size/2, 0, 2*Math.PI); ctx.fill(); return; } ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y); for (let i = 1; i < points.length - 2; i++) { const c = (points[i].x + points[i+1].x) / 2; const d = (points[i].y + points[i+1].y) / 2; ctx.quadraticCurveTo(points[i].x, points[i].y, c, d); } ctx.quadraticCurveTo(points[points.length-2].x, points[points.length-2].y, points[points.length-1].x, points[points.length-1].y); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }});
         const canvasOverlay = new CanvasOverlay().addTo(map);
 
-        // O resto das funções (eventos de ponteiro, CRUD de aulas, pins) permanece o mesmo
+        // Funções de desenho e manipulação de dados... (sem alterações)
         const queueRedraw = () => { if (!state.isRedrawQueued) { state.isRedrawQueued = true; requestAnimationFrame(() => { canvasOverlay.redraw(); state.isRedrawQueued = false; }); } };
         const onPointerDown = (e) => { if (e.target && !e.target.classList.contains('leaflet-container')) return; if (isTouchDevice) { if (e.pointerType === 'pen') { L.DomEvent.stop(e); } if (e.pointerType === 'touch' || state.isTwoFingerPanning) { return; } } if (state.currentInteractionMode === 'pin') { openPinModalForNew(map.mouseEventToLatLng(e)); return; } if (state.activeAulaId) { state.isDrawing = true; state.currentStroke = { tool: state.currentTool, color: state.currentTool === 'eraser' ? 'rgba(0,0,0,1)' : state.color, size: state.brushSize, opacity: state.currentTool === 'eraser' ? 1.0 : state.opacity, points: [map.mouseEventToLatLng(e)] }; } else if (!isTouchDevice) { state.isMapPanning = true; state.lastPanPoint = map.mouseEventToContainerPoint(e); ui.mapContainer.style.cursor = 'grabbing'; } };
         const onPointerMove = (e) => { if (isTouchDevice && (e.pointerType === 'touch' || state.isTwoFingerPanning)) return; if (state.isDrawing) { state.currentStroke.points.push(map.mouseEventToLatLng(e)); queueRedraw(); } else if (state.isMapPanning) { const p = map.mouseEventToContainerPoint(e); const o = p.subtract(state.lastPanPoint); state.lastPanPoint = p; map.panBy(o.multiplyBy(-1), { animate: false }); } };
@@ -357,17 +319,21 @@
         const selectColor = (color) => { state.color = color; ui.colorPicker.value = color; document.querySelectorAll('.fav-swatch').forEach(s => s.style.borderColor = s.style.backgroundColor === color ? 'var(--primary-color)' : 'transparent'); updateActiveTool('brush'); };
         const updateActiveTool = (tool) => { const isPin = tool === 'pin'; const isEraser = tool === 'eraser'; state.currentInteractionMode = isPin ? 'pin' : 'draw'; if (!isPin) state.currentTool = tool; ui.opacityContainer.classList.toggle('disabled', isEraser); ui.brushToolBtn.classList.toggle('active', tool === 'brush'); ui.eraserToolBtn.classList.toggle('active', isEraser); ui.pinToolBtn.classList.toggle('active', isPin); updateDrawingMode(); };
         const updateScrollbars=()=>{if(isTouchDevice) return; const t=map.getSize(),s=map.getPixelWorldBounds(),e=map.getPixelBounds(),o=s.max.x-s.min.x,n=s.max.y-s.min.y,d=e.max.x-e.min.x,a=e.max.y-e.min.y,r=d/o*t.x,l=a/n*t.y,c=(e.min.x-s.min.x)/o*t.x,h=(e.min.y-s.min.y)/n*t.y;ui.hThumb.style.width=`${Math.max(r,15)}px`,ui.vThumb.style.height=`${Math.max(l,15)}px`,ui.hThumb.style.left=`${c}px`,ui.vThumb.style.top=`${h}px`};
-        
-        // MELHORIA: Lógica de UI Refinada
+
+        // Funções de UI
         const toggleNavDrawer = () => { ui.navDrawer.classList.toggle('open'); ui.overlay.classList.toggle('open-nav'); ui.sidebar.classList.remove('open'); ui.overlay.classList.remove('open-tools'); };
-        const toggleToolsSidebar = () => { ui.sidebar.classList.toggle('open'); if(window.innerWidth > 900) { ui.overlay.classList.toggle('open-tools'); } };
+        const toggleToolsSidebar = () => { ui.sidebar.classList.toggle('open'); ui.overlay.classList.toggle('open-tools'); };
 
         const renderBiblioteca = () => { ui.bibliotecaGrid.innerHTML = ''; if (state.aulas.length === 0) { ui.bibliotecaGrid.innerHTML = '<p>Nenhuma aula encontrada. Crie uma para começar!</p>'; return; } state.aulas.forEach(aula => { const card = document.createElement('div'); card.className = 'aula-card'; card.innerHTML = `<h4>${aula.name}</h4><div class="aula-card-actions"><button class="btn btn-load" data-id="${aula.id}"><i class="fas fa-edit"></i> Carregar</button><button class="btn btn-delete" data-id="${aula.id}"><i class="fas fa-trash"></i> Excluir</button></div>`; ui.bibliotecaGrid.appendChild(card); }); };
         
-        // MELHORIA: Função de redimensionamento do mapa
+        // Função crucial para redimensionar o mapa em qualquer situação
         const invalidateMapSize = () => {
+            // Só executa se a visão do caderno estiver ativa
             if (state.currentView === 'caderno') {
-                setTimeout(() => map.invalidateSize({ animate: false }), 150);
+                // Usa um pequeno timeout para garantir que o DOM tenha atualizado as dimensões
+                setTimeout(() => {
+                    map.invalidateSize({ animate: false });
+                }, 150);
             }
         };
 
@@ -392,15 +358,19 @@
         const initializeApp = () => {
             loadAulasFromStorage();
             
-            // Event listeners
+            // Listeners
             ui.menuBtn.addEventListener('click', toggleNavDrawer);
             ui.mobileToolsBtn.addEventListener('click', toggleToolsSidebar);
-            ui.overlay.addEventListener('click', () => { ui.navDrawer.classList.remove('open'); ui.sidebar.classList.remove('open'); ui.overlay.classList.remove('open-nav', 'open-tools'); });
+            ui.overlay.addEventListener('click', () => { 
+                ui.navDrawer.classList.remove('open'); 
+                ui.sidebar.classList.remove('open'); 
+                ui.overlay.classList.remove('open-nav', 'open-tools'); 
+            });
             
-            // MELHORIA: Listener elegante para o fim da transição da sidebar
+            // Listener elegante que redesenha o mapa depois que a sidebar termina sua animação
             ui.sidebar.addEventListener('transitionend', invalidateMapSize);
 
-            // MELHORIA: Função debounce para o evento de resize
+            // Função debounce para otimizar o evento de resize
             const debounce = (func, wait) => {
                 let timeout;
                 return function(...args) {
@@ -411,7 +381,7 @@
             };
             window.addEventListener('resize', debounce(invalidateMapSize, 200));
             
-            // Demais listeners
+            // Demais listeners...
             ui.navLinks.forEach(link => { link.addEventListener('click', (e) => { e.preventDefault(); switchView(e.currentTarget.dataset.view); }); });
             ui.newAulaBtnLib.addEventListener('click', openNewAulaModal);
             ui.bibliotecaGrid.addEventListener('click', (e) => { const loadBtn = e.target.closest('.btn-load'); const deleteBtn = e.target.closest('.btn-delete'); if (loadBtn) { loadAula(Number(loadBtn.dataset.id)); } else if (deleteBtn) { deleteAula(Number(deleteBtn.dataset.id)); } });
