@@ -141,6 +141,8 @@
             .sidebar {
                 position: fixed; top: 0; left: 0; height: 100%;
                 z-index: 2000; transform: translateX(-100%);
+                /* CORREÇÃO: Habilita a rolagem por toque com inércia */
+                -webkit-overflow-scrolling: touch;
             }
             .sidebar.open { transform: translateX(0); }
             .mobile-fab { display: flex; }
@@ -232,7 +234,6 @@
         <div class="biblioteca-grid" id="biblioteca-grid"></div>
     </div>
     
-    <!-- MODAL DE NOVA AULA (COMPLETO) -->
     <div class="modal" id="new-aula-modal">
         <div class="modal-content">
             <h3 class="modal-title">Criar Nova Aula</h3>
@@ -243,7 +244,7 @@
             </div>
         </div>
     </div>
-    <!-- MODAL DE PIN (COMPLETO) -->
+
     <div class="modal" id="pin-modal">
       <div class="modal-content" style="max-width: 500px; text-align: left;">
         <h3 id="pin-modal-title" class="modal-title">Adicionar Pin</h3>
@@ -279,7 +280,6 @@
       </div>
     </div>
 
-    <!-- CONTÊINER DE NOTIFICAÇÃO (COMPLETO) -->
     <div id="notification-container"></div>
     
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -398,8 +398,13 @@
             
             ui.navLinks.forEach(link => link.classList.toggle('active', link.dataset.view === viewName));
             
-            if (isCaderno) { map.invalidateSize(); } 
-            else { state.activeAulaId = null; renderBiblioteca(); }
+            if (isCaderno) {
+                // CORREÇÃO: Força a revalidação do mapa com um pequeno delay
+                setTimeout(() => map.invalidateSize(), 10); 
+            } else { 
+                state.activeAulaId = null; 
+                renderBiblioteca(); 
+            }
 
             if(ui.navDrawer.classList.contains('open')) { toggleNavDrawer(); }
         };
