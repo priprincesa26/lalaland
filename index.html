@@ -50,8 +50,20 @@
         .aula-card-actions .btn-delete { background-color: var(--danger-color); color: white; }
         .aula-card-actions .btn-delete:hover { background-color: #c0392b; }
         
-        .map-wrapper { flex: 1; position: relative; overflow: hidden; }
-        #map { height: 100%; width: 100%; background-color: #add8e6; }
+        .map-wrapper {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            min-height: 200px;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            background-color: #add8e6;
+        }
         .custom-scrollbar { position: absolute; background: rgba(0, 0, 0, 0.2); border-radius: 7px; opacity: 0; transition: opacity 0.3s ease-in-out; z-index: 1000; }
         .map-wrapper:hover .custom-scrollbar { opacity: 1; }
         .custom-scrollbar .thumb { background: rgba(0, 0, 0, 0.5); border-radius: 7px; border: 1px solid rgba(255, 255, 255, 0.3); cursor: pointer; position: absolute; }
@@ -489,6 +501,23 @@
             if (!isTouchDevice) { setupScrollbarDrag(ui.hThumb, ui.hScroll, true); setupScrollbarDrag(ui.vThumb, ui.vScroll, false); }
             map.on('move zoomend', updateScrollbars);
             
+            // Função para notificar o Leaflet sobre a mudança de tamanho, com debounce
+            const debounceResize = () => {
+                let timer;
+                return () => {
+                    clearTimeout(timer);
+                    timer = setTimeout(() => {
+                        if (map) {
+                           map.invalidateSize(); // Esta é a função mágica do Leaflet
+                           updateScrollbars();
+                        }
+                    }, 150); // Atraso de 150ms para esperar o fim do redimensionamento
+                };
+            };
+            
+            // Adiciona o listener à janela
+            window.addEventListener('resize', debounceResize());
+
             renderBiblioteca();
             renderFavorites();
             selectColor(state.favoriteColors[0]);
