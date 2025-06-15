@@ -90,12 +90,8 @@
         .modal-button.confirm { background-color: var(--success-color); color: white; }
         .modal-button.cancel { background-color: #ccc; color: #333; }
         
-        .leaflet-container { cursor: grab !important; }
-        .leaflet-container.drawing-enabled { cursor: crosshair !important; touch-action: none; }
-        .leaflet-container.pin-mode { cursor: crosshair !important; touch-action: none; }
-        canvas.leaflet-canvas-layer { pointer-events: none; }
-        
-        .pin-popup-content { max-width: 320px; font-family: 'Montserrat', sans-serif; max-height: 400px; overflow-y: auto; padding-right: 10px;}
+        .leaflet-container.drawing-enabled { cursor: crosshair !important; }
+        canvas.leaflet-canvas-layer { pointer-events: auto; /* Permite que o canvas receba eventos */ }
         
         #notification-container { position: fixed; top: 20px; right: 20px; z-index: 4000; display: flex; flex-direction: column; align-items: flex-end; }
         .notification-toast { display: flex; align-items: center; gap: 15px; color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-weight: 500; min-width: 250px; animation: slideInRight 0.4s ease-out forwards; }
@@ -107,19 +103,20 @@
         @keyframes fadeOut { to { opacity: 0; transform: scale(0.9); } }
 
         .mobile-fab { display: none; }
-        .custom-scrollbar {
-            position: absolute; background: rgba(0, 0, 0, 0.2); border-radius: 7px; opacity: 0;
+        .custom-scrollbar { display: none; }
+
+        body:not(.touch-device) .custom-scrollbar {
+            display: block; position: absolute; background: rgba(0, 0, 0, 0.2); border-radius: 7px; opacity: 0;
             transition: opacity 0.3s ease-in-out; z-index: 1000;
         }
-        .map-wrapper:hover .custom-scrollbar { opacity: 1; }
-        .custom-scrollbar .thumb { background: rgba(0, 0, 0, 0.5); border-radius: 7px; border: 1px solid rgba(255, 255, 255, 0.3); cursor: pointer; position: absolute; }
-        .custom-scrollbar .thumb:hover { background: rgba(0, 0, 0, 0.7); }
-        .custom-scrollbar.horizontal { bottom: 0; left: 0; width: 100%; height: 14px; }
-        .custom-scrollbar.horizontal .thumb { height: 100%; top: 0; }
-        .custom-scrollbar.vertical { top: 0; right: 0; width: 14px; height: 100%; }
-        .custom-scrollbar.vertical .thumb { width: 100%; left: 0; }
-
-        body.touch-device .custom-scrollbar { display: none; }
+        body:not(.touch-device) .map-wrapper:hover .custom-scrollbar { opacity: 1; }
+        body:not(.touch-device) .custom-scrollbar .thumb { background: rgba(0, 0, 0, 0.5); border-radius: 7px; border: 1px solid rgba(255, 255, 255, 0.3); cursor: pointer; position: absolute; }
+        body:not(.touch-device) .custom-scrollbar .thumb:hover { background: rgba(0, 0, 0, 0.7); }
+        body:not(.touch-device) .custom-scrollbar.horizontal { bottom: 0; left: 0; width: 100%; height: 14px; }
+        body:not(.touch-device) .custom-scrollbar.horizontal .thumb { height: 100%; top: 0; }
+        body:not(.touch-device) .custom-scrollbar.vertical { top: 0; right: 0; width: 14px; height: 100%; }
+        body:not(.touch-device) .custom-scrollbar.vertical .thumb { width: 100%; left: 0; }
+        
         body.touch-device .mobile-fab { 
             display: flex; position: absolute; top: 15px; right: 15px; width: 50px; height: 50px; 
             background-color: var(--primary-color); color: white; border: none; border-radius: 50%; 
@@ -166,7 +163,6 @@
                         <span>Salvar modificações</span>
                     </button>
                 </div>
-                
                 <div class="sidebar-section">
                     <h3><i class="fas fa-layer-group"></i> Tipos de Mapa</h3>
                     <div class="map-type-container">
@@ -176,7 +172,6 @@
                         <button class="map-type-btn" data-map="night"><i class="fas fa-moon"></i> Noturno</button>
                     </div>
                 </div>
-
                 <div class="sidebar-section">
                     <h3><i class="fas fa-paint-brush"></i> Ferramentas</h3>
                     <div class="tool-group">
@@ -288,45 +283,31 @@
         let state = {
             isDrawing: false, currentTool: 'brush', brushSize: 5, color: '#e74c3c', opacity: 1.0,
             favoriteColors: ["#e74c3c", "#2ecc71", "#3498db", "#f1c40f", "#9b59b6", "#34495e", "#ffffff", "#000000"],
-            aulas: [], activeAulaId: null, currentStroke: null, isRedrawQueued: false,
+            aulas: [], activeAulaId: null, currentStroke: null, isRedrawQueued: false, isDraggingThumb: false,
             currentInteractionMode: 'draw', editingPin: null, currentView: 'biblioteca'
         };
         
         const showNotification = (message, type = 'success', duration = 3000) => { const container = document.getElementById('notification-container'); const toast = document.createElement('div'); toast.className = `notification-toast ${type}`; const icons = { success: 'fa-check-circle', error: 'fa-times-circle' }; toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`; container.appendChild(toast); setTimeout(() => { toast.classList.add('fade-out'); toast.addEventListener('animationend', () => toast.remove()); }, duration); };
         
-        const map = L.map(ui.mapContainer, {
-            center: [20, 0], zoom: 3, minZoom: 2, worldCopyJump: true,
-            maxBounds: [[-90, -180], [90, 180]], maxBoundsViscosity: 1.0,
-            zoomControl: false, dragging: true, touchZoom: true, scrollWheelZoom: true
-        });
+        const map = L.map(ui.mapContainer, { center: [20, 0], zoom: 3, minZoom: 2, worldCopyJump: true, maxBounds: [[-90, -180], [90, 180]], maxBoundsViscosity: 1.0, zoomControl: false, dragging: true, touchZoom: true, scrollWheelZoom: true });
         L.control.zoom({ position: 'topright' }).addTo(map);
         
         const mapLayers = { political: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }), physical: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap' }), satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' }), night: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO' }) };
         let currentMapLayer = 'political'; mapLayers[currentMapLayer].addTo(map);
 
         const CanvasOverlay = L.Layer.extend({
-            onAdd: function(map) { this._map = map; this._canvas = L.DomUtil.create('canvas', 'leaflet-canvas-layer'); map.getPanes().overlayPane.appendChild(this._canvas); this._update(); map.on('moveend resize', this._update, this); },
+            onAdd: function(map) { this._map = map; this._canvas = L.DomUtil.create('canvas', 'leaflet-canvas-layer'); map.getPanes().overlayPane.appendChild(this._canvas); this._update(); map.on('moveend resize', this._update, this); this._canvas.addEventListener('mousedown', this._onDrawStart.bind(this)); this._canvas.addEventListener('mousemove', this._onDrawing.bind(this)); window.addEventListener('mouseup', this._onDrawEnd.bind(this)); this._canvas.addEventListener('touchstart', this._onDrawStart.bind(this)); this._canvas.addEventListener('touchmove', this._onDrawing.bind(this)); window.addEventListener('touchend', this._onDrawEnd.bind(this)); },
             onRemove: function(map) { map.getPanes().overlayPane.removeChild(this._canvas); map.off('moveend resize', this._update, this); },
             _update: function() { const size = this._map.getSize(); this._canvas.width = size.x; this._canvas.height = size.y; const topLeft = this._map.containerPointToLayerPoint([0, 0]); L.DomUtil.setPosition(this._canvas, topLeft); this.redraw(); },
             redraw: function() { const ctx = this._canvas.getContext('2d'); ctx.clearRect(0, 0, this._canvas.width, this._canvas.height); if (!state.activeAulaId) return; const aula = state.aulas.find(a => a.id === state.activeAulaId); if (!aula) return; aula.drawings.forEach(stroke => this._drawStroke(stroke, ctx)); if (state.isDrawing && state.currentStroke) this._drawStroke(state.currentStroke, ctx); },
-            _drawStroke: function(stroke, ctx) { if (!stroke || stroke.points.length < 1) return; ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = stroke.size; ctx.strokeStyle = stroke.color; ctx.globalAlpha = stroke.opacity; const points = stroke.points.map(latlng => this._map.latLngToContainerPoint(latlng)); if (points.length < 2) { ctx.beginPath(); ctx.fillStyle = ctx.strokeStyle; ctx.arc(points[0].x, points[0].y, stroke.size/2, 0, 2*Math.PI); ctx.fill(); return; } ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y); for (let i = 1; i < points.length - 2; i++) { const c = (points[i].x + points[i+1].x) / 2; const d = (points[i].y + points[i+1].y) / 2; ctx.quadraticCurveTo(points[i].x, points[i].y, c, d); } ctx.quadraticCurveTo(points[points.length-2].x, points[points.length-2].y, points[points.length-1].x, points[points.length-1].y); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
+            _drawStroke: function(stroke, ctx) { if (!stroke || stroke.points.length < 1) return; ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = stroke.size; ctx.strokeStyle = stroke.color; ctx.globalAlpha = stroke.opacity; const points = stroke.points.map(latlng => this._map.latLngToContainerPoint(latlng)); if (points.length < 2) { ctx.beginPath(); ctx.fillStyle = ctx.strokeStyle; ctx.arc(points[0].x, points[0].y, stroke.size/2, 0, 2*Math.PI); ctx.fill(); return; } ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y); for (let i = 1; i < points.length - 2; i++) { const c = (points[i].x + points[i+1].x) / 2; const d = (points[i].y + points[i+1].y) / 2; ctx.quadraticCurveTo(points[i].x, points[i].y, c, d); } ctx.quadraticCurveTo(points[points.length-2].x, points[points.length-2].y, points[points.length-1].x, points[points.length-1].y); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; },
+            _onDrawStart: function(e) { if (!map.dragging.enabled()) { state.isDrawing = true; state.currentStroke = { tool: state.currentTool, color: state.currentTool === 'eraser' ? 'rgba(0,0,0,1)' : state.color, size: state.brushSize, opacity: state.currentTool === 'eraser' ? 1.0 : state.opacity, points: [this._map.mouseEventToLatLng(e.touches ? e.touches[0] : e)] }; e.preventDefault(); } },
+            _onDrawing: function(e) { if(state.isDrawing) { state.currentStroke.points.push(this._map.mouseEventToLatLng(e.touches ? e.touches[0] : e)); queueRedraw(); e.preventDefault(); } },
+            _onDrawEnd: function() { if (state.isDrawing) { if (state.currentStroke?.points.length > 1) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) a.drawings.push(state.currentStroke); } state.currentStroke = null; queueRedraw(); } state.isDrawing = false; }
         });
         const canvasOverlay = new CanvasOverlay().addTo(map);
         const queueRedraw = () => { if (!state.isRedrawQueued) { state.isRedrawQueued = true; requestAnimationFrame(() => { canvasOverlay.redraw(); state.isRedrawQueued = false; }); } };
         
-        const onPointerDown = (e) => {
-            if (e.target.closest('.leaflet-control-container')) return;
-            if (state.currentInteractionMode === 'pin') { openPinModalForNew(map.mouseEventToLatLng(e.originalEvent)); return; }
-            state.isDrawing = true;
-            state.currentStroke = { tool: state.currentTool, color: state.currentTool === 'eraser' ? 'rgba(0,0,0,1)' : state.color, size: state.brushSize, opacity: state.currentTool === 'eraser' ? 1.0 : state.opacity, points: [e.latlng] };
-        };
-        const onPointerMove = (e) => { if (state.isDrawing) { state.currentStroke.points.push(e.latlng); queueRedraw(); } };
-        const onPointerUp = () => { if (state.isDrawing) { if (state.currentStroke?.points.length > 1) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) a.drawings.push(state.currentStroke); } state.currentStroke = null; queueRedraw(); } state.isDrawing = false; };
-        
-        map.on('mousedown', onPointerDown);
-        map.on('mousemove', onPointerMove);
-        map.on('mouseup', onPointerUp);
-
         const toggleNavDrawer = () => { ui.navDrawer.classList.toggle('open'); ui.overlay.classList.toggle('open-nav'); ui.sidebar.classList.remove('open'); ui.overlay.classList.remove('open-tools'); };
         const toggleToolsSidebar = () => { ui.sidebar.classList.toggle('open'); ui.overlay.classList.toggle('open-tools'); };
         
@@ -338,13 +319,9 @@
             
             ui.navLinks.forEach(link => link.classList.toggle('active', link.dataset.view === viewName));
             
-            if (isCaderno) { 
-                if (!state.activeAulaId) { ui.activeAulaTitle.textContent = "Nenhuma aula carregada"; }
-                setTimeout(() => map.invalidateSize(), 100); 
-            } else { 
-                state.activeAulaId = null; 
-                renderBiblioteca(); 
-            }
+            if (isCaderno) { if (!state.activeAulaId) { ui.activeAulaTitle.textContent = "Nenhuma aula carregada"; } setTimeout(() => map.invalidateSize(), 100); } 
+            else { state.activeAulaId = null; renderBiblioteca(); }
+
             if(ui.navDrawer.classList.contains('open')) { toggleNavDrawer(); }
         };
 
@@ -368,17 +345,16 @@
         const deleteCurrentPin = () => { if (!state.editingPin || !confirm("Tem certeza que deseja excluir este pin?")) return; const aula = state.aulas.find(a => a.id === state.activeAulaId); if (!aula || !aula.pins) return; aula.pins = aula.pins.filter(p => p.id !== state.editingPin.id); loadPinsForCurrentAula(); ui.pinModal.style.display = 'none'; state.editingPin = null; };
         const clearAllMapPins = () => { map.eachLayer(layer => { if (layer.options.isPin) map.removeLayer(layer); }); };
         const loadPinsForCurrentAula = () => { clearAllMapPins(); const a = state.aulas.find(a => a.id === state.activeAulaId); if (a?.pins) a.pins.forEach(addPinToMap); };
-        const addPinToMap = (pinData) => { const icon = L.divIcon({ className: 'custom-pin-icon', html: `<i class="fas fa-map-marker-alt pin-background" style="color: ${pinData.color || '#e74c3c'};"></i><span class="pin-text">${pinData.title.charAt(0).toUpperCase()}</span>`, iconSize: [30, 42], iconAnchor: [15, 42] }); const marker = L.marker(pinData.latlng, { icon, isPin: true, pinId: pinData.id }).addTo(map); let content = `<h4>${pinData.title}</h4>`; if (pinData.description) content += `<p>${pinData.description.replace(/\n/g, '<br>')}</p>`; if (pinData.images?.length > 0) { content += '<div class="images-container">'; pinData.images.forEach(img => content += `<img src="${img}">`); content += '</div>'; } if (pinData.links?.length > 0) { content += '<div class="links-container">'; pinData.links.forEach(link => { if (link.type === 'youtube') { content += `<div class="youtube-embed"><iframe src="https://www.youtube.com/embed/${getYouTubeId(link.url)}" frameborder="0" allowfullscreen></iframe></div>`; } else { content += `<a href="${link.url}" target="_blank">${link.url}</a>`; } }); content += '</div>'; } marker.bindPopup(`<div class="pin-popup-content">${content}</div>`); marker.on('dblclick', () => openPinModalForEdit(pinData)); };
+        const addPinToMap = (pinData) => { const icon = L.divIcon({ className: 'custom-pin-icon', html: `<i class="fas fa-map-marker-alt" style="font-size: 2.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.4); line-height: 1; color: ${pinData.color || '#e74c3c'};"></i><span style="position: absolute; top: 8px; left: 0; right: 0; font-size: 1rem; font-weight: bold; color: white; text-shadow: 1px 1px 2px black; pointer-events: none;">${pinData.title.charAt(0).toUpperCase()}</span>` }); const marker = L.marker(pinData.latlng, { icon, isPin: true, pinId: pinData.id }).addTo(map); let content = `<h4>${pinData.title}</h4>`; if (pinData.description) content += `<p>${pinData.description.replace(/\n/g, '<br>')}</p>`; if (pinData.images?.length > 0) { content += '<div class="images-container">'; pinData.images.forEach(img => content += `<img src="${img}" style="max-width: 100%; border-radius: 5px; margin-top: 5px;">`); content += '</div>'; } if (pinData.links?.length > 0) { content += '<div class="links-container">'; pinData.links.forEach(link => { if (link.type === 'youtube') { content += `<div class="youtube-embed"><iframe src="https://www.youtube.com/embed/${getYouTubeId(link.url)}" frameborder="0" allowfullscreen></iframe></div>`; } else { content += `<a href="${link.url}" target="_blank">${link.url}</a>`; } }); content += '</div>'; } marker.bindPopup(`<div class="pin-popup-content">${content}</div>`); marker.on('dblclick', () => openPinModalForEdit(pinData)); };
         const clearAll = () => { if (!confirm("Isso limpará TODOS os desenhos e pins desta aula. Deseja continuar?")) return; if (state.activeAulaId) { const a = state.aulas.find(a => a.id === state.activeAulaId); if (a) { a.drawings = []; a.pins = []; } queueRedraw(); loadPinsForCurrentAula(); }};
         const undoLast = () => { if (!state.activeAulaId) return; const a = state.aulas.find(a => a.id === state.activeAulaId); if (a?.drawings?.length > 0) { a.drawings.pop(); queueRedraw(); } };
         const switchMap = (mapType) => { if (mapLayers[mapType] && mapType !== currentMapLayer) { map.removeLayer(mapLayers[currentMapLayer]); currentMapLayer = mapType; map.addLayer(mapLayers[currentMapLayer]); if(state.activeAulaId) { const a = state.aulas.find(a => a.id === state.activeAulaId); if(a) a.mapType = mapType; } } document.querySelectorAll('.map-type-btn').forEach(b => b.classList.toggle('selected', b.dataset.map === mapType)); };
         const selectColor = (color) => { state.color = color; ui.colorPicker.value = color; document.querySelectorAll('.fav-swatch').forEach(s => s.style.borderColor = s.style.backgroundColor === color ? 'var(--primary-color)' : 'transparent'); updateActiveTool('brush'); };
         
         const updateActiveTool = (tool) => {
-            const isPin = tool === 'pin';
-            const isEraser = tool === 'eraser';
+            const isPin = tool === 'pin'; const isEraser = tool === 'eraser';
             const isDrawingTool = tool === 'brush' || tool === 'eraser';
-
+            
             state.currentInteractionMode = isPin ? 'pin' : 'draw';
             if (!isPin) state.currentTool = tool;
             
@@ -387,8 +363,10 @@
             ui.eraserToolBtn.classList.toggle('active', isEraser);
             ui.pinToolBtn.classList.toggle('active', isPin);
             
-            if (isDrawingTool) { map.dragging.disable(); map.getContainer().style.cursor = 'crosshair'; } 
-            else { map.dragging.enable(); map.getContainer().style.cursor = 'grab'; }
+            if (isDrawingTool) { map.dragging.disable(); ui.mapContainer.classList.add('drawing-enabled'); } 
+            else { map.dragging.enable(); ui.mapContainer.classList.remove('drawing-enabled'); }
+
+            if(isPin) { map.once('click', (e) => { if(state.currentInteractionMode === 'pin') openPinModalForNew(e.latlng) }); }
         };
         
         const initializeApp = () => {
@@ -408,7 +386,7 @@
             ui.newAulaModal.addEventListener('click', (e) => { if(e.target === ui.newAulaModal) ui.newAulaModal.style.display = 'none'; });
             ui.brushToolBtn.addEventListener('click', () => updateActiveTool('brush'));
             ui.eraserToolBtn.addEventListener('click', () => updateActiveTool('eraser'));
-            ui.pinToolBtn.addEventListener('click', () => updateActiveTool(state.currentInteractionMode === 'pin' ? 'brush' : 'pin'));
+            ui.pinToolBtn.addEventListener('click', () => updateActiveTool('pin'));
             ui.undoBtn.addEventListener('click', undoLast); ui.clearBtn.addEventListener('click', clearAll);
             ui.saveAulaBtn.addEventListener('click', () => { saveAulasToStorage(); showNotification('Modificações salvas!'); });
             ui.sizeSlider.addEventListener('input', e => { state.brushSize = e.target.value; ui.sizeLabel.textContent = e.target.value; });
@@ -422,7 +400,7 @@
             document.getElementById('image-upload').addEventListener('change', (e) => handleImageFiles(e.target.files));
             window.addEventListener('paste', (e) => { if (ui.pinModal.style.display === 'flex') handleImageFiles(e.clipboardData.files); });
             const renderFavorites = () => { ui.favoritesPalette.innerHTML = ''; state.favoriteColors.forEach(c => { const s = document.createElement('div'); s.className = 'fav-swatch'; s.style.backgroundColor = c; s.addEventListener('click', () => selectColor(c)); ui.favoritesPalette.appendChild(s); }); };
-            const setupScrollbarDrag=(t,s,i)=>{t.addEventListener("pointerdown",e=>{e.stopPropagation(),state.isDraggingThumb=!0;const o=o=>{let n=0,d=0;const a=map.getPixelWorldBounds().max.x-map.getPixelWorldBounds().min.x,r=map.getPixelWorldBounds().max.y-map.getPixelWorldBounds().min.y,l=map.getSize();i?(n=o.movementX*a/l.x):(d=o.movementY*r/l.y),map.panBy([n,d],{animate:!1})},n=()=>{state.isDraggingThumb=!1,window.removeEventListener("pointermove",o),window.removeEventListener("pointerup",n)};window.addEventListener("pointermove",o),window.addEventListener("pointerup",n)})};const updateScrollbars=()=>{if(isTouchDevice) return; const t=map.getSize(),s=map.getPixelWorldBounds(),e=map.getPixelBounds(),o=s.max.x-s.min.x,n=s.max.y-s.min.y,d=e.max.x-e.min.x,a=e.max.y-e.min.y,r=d/o*t.x,l=a/n*t.y,c=(e.min.x-s.min.x)/o*t.x,h=(e.min.y-s.min.y)/n*t.y;ui.hThumb.style.width=`${Math.max(r,15)}px`,ui.vThumb.style.height=`${Math.max(l,15)}px`,ui.hThumb.style.left=`${c}px`,ui.vThumb.style.top=`${h}px`};
+            const setupScrollbarDrag=(t,s,i)=>{t.addEventListener("pointerdown",e=>{e.stopPropagation();let o=o=>{let n=0,d=0;const a=map.getPixelWorldBounds().max.x-map.getPixelWorldBounds().min.x,r=map.getPixelWorldBounds().max.y-map.getPixelWorldBounds().min.y,l=map.getSize();i?(n=o.movementX*a/l.x):(d=o.movementY*r/l.y),map.panBy([n,d],{animate:!1})};const n=()=>{window.removeEventListener("pointermove",o),window.removeEventListener("pointerup",n)};window.addEventListener("pointermove",o),window.addEventListener("pointerup",n)})};const updateScrollbars=()=>{if(isTouchDevice)return;const t=map.getSize(),s=map.getPixelWorldBounds(),e=map.getPixelBounds();if(!s||!e||!t||t.x===0||t.y===0)return;const o=s.max.x-s.min.x,n=s.max.y-s.min.y,d=e.max.x-e.min.x,a=e.max.y-e.min.y;if(o<=0||n<=0)return;const r=d/o*t.x,l=a/n*t.y,c=(e.min.x-s.min.x)/o*t.x,h=(e.min.y-s.min.y)/n*t.y;ui.hThumb.style.width=`${Math.max(r,15)}px`,ui.vThumb.style.height=`${Math.max(l,15)}px`,ui.hThumb.style.left=`${c}px`,ui.vThumb.style.top=`${h}px`};
             if (!isTouchDevice) { setupScrollbarDrag(ui.hThumb, ui.hScroll, true); setupScrollbarDrag(ui.vThumb, ui.vScroll, false); }
             map.on('moveend zoomend', updateScrollbars);
             
