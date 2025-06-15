@@ -131,55 +131,22 @@
         @keyframes slideInRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeOut { to { opacity: 0; transform: scale(0.9); } }
 
-        /* NOVO: Botão flutuante para ferramentas no mobile */
-        .mobile-fab {
-            display: none; /* Oculto por padrão */
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 50px;
-            height: 50px;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 1.4rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            cursor: pointer;
-            z-index: 1001;
-            align-items: center;
-            justify-content: center;
-        }
+        .mobile-fab { display: none; position: absolute; top: 15px; right: 15px; width: 50px; height: 50px; background-color: var(--primary-color); color: white; border: none; border-radius: 50%; font-size: 1.4rem; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; z-index: 1001; align-items: center; justify-content: center; }
 
-        /* --- MEDIA QUERIES PARA RESPONSIVIDADE --- */
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
             .custom-scrollbar { display: none; }
             .header h1 { font-size: 1.5rem; }
             .menu-btn { font-size: 1.5rem; }
             
-            /* Sidebar de ferramentas se torna um drawer no mobile */
             .sidebar {
-                position: fixed;
-                top: 0;
-                left: 0;
-                height: 100%;
-                z-index: 2000; /* Acima do overlay de ferramentas */
-                transform: translateX(-100%);
+                position: fixed; top: 0; left: 0; height: 100%;
+                z-index: 2000; transform: translateX(-100%);
             }
-            .sidebar.open {
-                transform: translateX(0);
-            }
-            .mobile-fab {
-                display: flex; /* Mostra o botão no mobile */
-            }
+            .sidebar.open { transform: translateX(0); }
+            .mobile-fab { display: flex; }
 
-            /* Ajustes na tela da biblioteca */
-            #biblioteca-view {
-                padding: 1.5rem 1rem;
-            }
-            #biblioteca-view h2 {
-                font-size: 1.5rem;
-            }
+            #biblioteca-view { padding: 1.5rem 1rem; }
+            #biblioteca-view h2 { font-size: 1.5rem; }
         }
     </style>
 </head>
@@ -265,8 +232,54 @@
         <div class="biblioteca-grid" id="biblioteca-grid"></div>
     </div>
     
-    <div class="modal" id="new-aula-modal"><!-- ...código do modal... --></div>
-    <div class="modal" id="pin-modal"><!-- ...código do modal... --></div>
+    <!-- MODAL DE NOVA AULA (COMPLETO) -->
+    <div class="modal" id="new-aula-modal">
+        <div class="modal-content">
+            <h3 class="modal-title">Criar Nova Aula</h3>
+            <input type="text" id="aula-name-input" class="modal-input" placeholder="Dê um nome à sua aula">
+            <div class="modal-buttons">
+                <button id="cancel-new-aula" class="modal-button cancel">Cancelar</button>
+                <button id="confirm-new-aula" class="modal-button confirm">Criar</button>
+            </div>
+        </div>
+    </div>
+    <!-- MODAL DE PIN (COMPLETO) -->
+    <div class="modal" id="pin-modal">
+      <div class="modal-content" style="max-width: 500px; text-align: left;">
+        <h3 id="pin-modal-title" class="modal-title">Adicionar Pin</h3>
+        
+        <label>Título:</label>
+        <input type="text" id="pin-title" class="modal-input" placeholder="Título que aparecerá no mapa">
+        
+        <label>Cor do Pin:</label>
+        <input type="color" id="pin-color-input" value="#e74c3c">
+
+        <label>Descrição:</label>
+        <textarea id="pin-description" class="modal-input" rows="4" placeholder="Detalhes, notas, curiosidades..."></textarea>
+
+        <label>Imagens (arraste e solte, cole ou clique):</label>
+        <div id="pin-image-dropzone" class="dropzone">
+          <div id="pin-images-preview" class="images-preview"></div>
+          <p>Clique ou cole (Ctrl+V) imagens aqui</p>
+        </div>
+        <input type="file" id="image-upload" accept="image/*" multiple style="display: none;">
+
+        <label>Links:</label>
+        <div id="pin-links-container"></div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <input type="text" id="link-url-input" class="modal-input" placeholder="Cole a URL aqui" style="margin: 0; flex-grow: 1;">
+            <button id="add-link-btn" class="modal-button confirm" style="padding: 10px;">Adicionar</button>
+        </div>
+
+        <div class="modal-buttons" style="margin-top: 20px;">
+          <button id="delete-pin-btn" class="modal-button cancel" style="display: none; margin-right: auto;">Excluir Pin</button>
+          <button id="cancel-pin" class="modal-button cancel">Cancelar</button>
+          <button id="save-pin" class="modal-button confirm">Salvar Pin</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTÊINER DE NOTIFICAÇÃO (COMPLETO) -->
     <div id="notification-container"></div>
     
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -378,13 +391,14 @@
         
         const switchView = (viewName) => {
             state.currentView = viewName;
-            ui.cadernoView.style.display = viewName === 'caderno' ? 'block' : 'none';
-            ui.bibliotecaView.style.display = viewName === 'biblioteca' ? 'block' : 'none';
-            ui.mobileToolsBtn.style.display = viewName === 'caderno' ? 'flex' : 'none';
+            const isCaderno = viewName === 'caderno';
+            ui.cadernoView.style.display = isCaderno ? 'block' : 'none';
+            ui.bibliotecaView.style.display = isCaderno ? 'none' : 'block';
+            ui.mobileToolsBtn.style.display = isCaderno && window.innerWidth <= 900 ? 'flex' : 'none';
             
             ui.navLinks.forEach(link => link.classList.toggle('active', link.dataset.view === viewName));
             
-            if (viewName === 'caderno') { map.invalidateSize(); } 
+            if (isCaderno) { map.invalidateSize(); } 
             else { state.activeAulaId = null; renderBiblioteca(); }
 
             if(ui.navDrawer.classList.contains('open')) { toggleNavDrawer(); }
@@ -431,18 +445,13 @@
             loadAulasFromStorage();
             
             ui.menuBtn.addEventListener('click', toggleNavDrawer);
-            ui.overlay.addEventListener('click', () => {
-                ui.navDrawer.classList.remove('open');
-                ui.sidebar.classList.remove('open');
-                ui.overlay.classList.remove('open-nav', 'open-tools');
-            });
+            ui.overlay.addEventListener('click', () => { ui.navDrawer.classList.remove('open'); ui.sidebar.classList.remove('open'); ui.overlay.classList.remove('open-nav', 'open-tools'); });
             ui.navLinks.forEach(link => { link.addEventListener('click', (e) => { e.preventDefault(); switchView(e.currentTarget.dataset.view); }); });
             ui.mobileToolsBtn.addEventListener('click', toggleToolsSidebar);
 
             ui.newAulaBtnLib.addEventListener('click', openNewAulaModal);
             ui.bibliotecaGrid.addEventListener('click', (e) => {
-                const loadBtn = e.target.closest('.btn-load');
-                const deleteBtn = e.target.closest('.btn-delete');
+                const loadBtn = e.target.closest('.btn-load'); const deleteBtn = e.target.closest('.btn-delete');
                 if (loadBtn) { loadAula(Number(loadBtn.dataset.id)); } 
                 else if (deleteBtn) { deleteAula(Number(deleteBtn.dataset.id)); }
             });
